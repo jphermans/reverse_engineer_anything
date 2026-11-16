@@ -25,19 +25,19 @@ class HistoryAction(ApiHandler):
         try:
             if action == "clear":
                 if not data.get("confirm"):
-                    raise ValueError("Wissen vereist bevestiging (confirm=true).")
+                    raise ValueError("Clearing requires confirmation (confirm=true).")
                 removed = state.clear_history(root)
                 return {"status": "ok", "action": "clear", "removed": removed}
             if action == "remove":
                 entry_id = str(data.get("id") or "").strip()
                 if not entry_id:
-                    raise ValueError("Ontbrekend veld: id.")
+                    raise ValueError("Missing field: id.")
                 ok = state.remove_entry(root, entry_id)
                 return {"status": "ok", "action": "remove", "removed_entry": ok}
             if action == "note":
                 text = str(data.get("text") or "").strip()
                 if not text:
-                    raise ValueError("Notitie is leeg.")
+                    raise ValueError("Note is empty.")
                 ws = str(data.get("workspace") or "").strip() or None
                 entry = state.add_history(
                     root,
@@ -46,7 +46,7 @@ class HistoryAction(ApiHandler):
                 return {"status": "ok", "action": "note", "entry": entry}
             return {
                 "status": "error",
-                "error": "Onbekende actie: gebruik clear, remove of note.",
+                "error": "Unknown action: use clear, remove or note.",
             }
         except ValueError as exc:
             return {"status": "error", "error": str(exc)}

@@ -7,8 +7,8 @@
     <button type="button"
             class="rea-indicator"
             :class="$store.reaStore.toolClass"
-            title="Reverse Engineer Anything: tool-inventaris, werkruimtes en historiek"
-            aria-label="Reverse Engineer Anything werkbank openen"
+            title="Reverse Engineer Anything: tool inventory, workspaces and history"
+            aria-label="Open the Reverse Engineer Anything workbench"
             @click="$store.reaStore.openWorkbench()">
       <span class="rea-spinner" x-show="$store.reaStore.busy && !$store.reaStore.loaded" aria-hidden="true"></span>
       <x-icon name="travel_explore" aria-hidden="true"></x-icon>

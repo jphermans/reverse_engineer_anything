@@ -31,6 +31,6 @@ class Workspace(ApiHandler):
                     root, data.get("name"), bool(data.get("confirm"))
                 )
                 return {"status": "ok", "action": "delete", **result}
-            return {"status": "error", "error": "Onbekende actie: gebruik create of delete."}
+            return {"status": "error", "error": "Unknown action: use create or delete."}
         except workspace.WorkspaceError as exc:
             return {"status": "error", "error": str(exc)}

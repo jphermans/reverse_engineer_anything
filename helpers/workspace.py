@@ -22,8 +22,8 @@ def validate_name(name: str) -> str:
     name = str(name or "").strip()
     if not NAME_RE.match(name):
         raise WorkspaceError(
-            "Ongeldige naam: gebruik letters, cijfers, punt, streep of "
-            "underscore (max 64 tekens, begint met letter of cijfer)."
+            "Invalid name: use letters, digits, dot, dash or "
+            "underscore (max 64 chars, must start with a letter or digit)."
         )
     return name
 
@@ -32,7 +32,7 @@ def _workspace_path(root: str, name: str) -> str:
     base = os.path.realpath(root)
     path = os.path.realpath(os.path.join(base, name))
     if path != base and not path.startswith(base + os.sep):
-        raise WorkspaceError("Naam valt buiten de werkruimte-root.")
+        raise WorkspaceError("Name escapes the workspace root.")
     return path
 
 
@@ -75,10 +75,10 @@ def create_workspace(root: str, name: str) -> dict:
 def delete_workspace(root: str, name: str, confirm: bool) -> dict:
     name = validate_name(name)
     if not confirm:
-        raise WorkspaceError("Verwijderen vereist bevestiging (confirm=true).")
+        raise WorkspaceError("Deletion requires confirmation (confirm=true).")
     path = _workspace_path(root, name)
     if not os.path.isdir(path):
-        raise WorkspaceError("Werkruimte bestaat niet.")
+        raise WorkspaceError("Workspace does not exist.")
     shutil.rmtree(path)
     state.add_history(root, {"action": "workspace_delete", "workspace": name, "details": path})
     return {"name": name, "removed": True}

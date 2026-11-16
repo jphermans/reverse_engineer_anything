@@ -13,9 +13,9 @@
 
         <div class="rea-tabs">
           <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'tools' }" @click="$store.reaStore.tab = 'tools'">Tools</button>
-          <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'workspaces' }" @click="$store.reaStore.tab = 'workspaces'">Werkruimtes</button>
-          <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'history' }" @click="$store.reaStore.tab = 'history'">Historiek</button>
-          <button type="button" class="rea-refresh" title="Vernieuwen" :disabled="$store.reaStore.busy" @click="$store.reaStore.refreshAll()">
+          <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'workspaces' }" @click="$store.reaStore.tab = 'workspaces'">Workspaces</button>
+          <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'history' }" @click="$store.reaStore.tab = 'history'">History</button>
+          <button type="button" class="rea-refresh" title="Refresh" :disabled="$store.reaStore.busy" @click="$store.reaStore.refreshAll()">
             <x-icon name="refresh" aria-hidden="true"></x-icon>
           </button>
         </div>
@@ -23,9 +23,9 @@
         <template x-if="$store.reaStore.tab === 'tools'">
           <div class="rea-section">
             <div class="rea-summary">
-              <span x-text="$store.reaStore.toolLabel + ' tools beschikbaar'"></span>
+              <span x-text="$store.reaStore.toolLabel + ' tools available'"></span>
               <span class="rea-missing" x-show="$store.reaStore.summary.missing.length"
-                    x-text="'ontbreekt: ' + $store.reaStore.summary.missing.join(', ')"></span>
+                    x-text="'missing: ' + $store.reaStore.summary.missing.join(', ')"></span>
             </div>
             <template x-for="cat in $store.reaStore.categories" :key="cat.key">
               <div class="rea-cat">
@@ -46,21 +46,21 @@
         <template x-if="$store.reaStore.tab === 'workspaces'">
           <div class="rea-section">
             <div class="rea-row">
-              <input type="text" placeholder="naam werkruimte, bijv. app-v1" spellcheck="false"
+              <input type="text" placeholder="workspace name, e.g. app-v1" spellcheck="false"
                      x-model="$store.reaStore.newWorkspaceName"
                      @keydown.enter="$store.reaStore.createWorkspace()" />
               <button type="button" class="btn" :disabled="$store.reaStore.busy || !$store.reaStore.newWorkspaceName.trim()"
-                      @click="$store.reaStore.createWorkspace()">Aanmaken</button>
+                      @click="$store.reaStore.createWorkspace()">Create</button>
             </div>
             <div class="rea-root" x-text="'Root: ' + $store.reaStore.workspaceRoot"></div>
             <template x-if="$store.reaStore.workspaces.length === 0">
-              <div class="rea-empty">Nog geen werkruimtes. Maak er één aan en laat de agent hier zijn analyse-kopieën neerzetten (leanrea-regel: werk op een kopie).</div>
+              <div class="rea-empty">No workspaces yet. Create one and let the agent place its analysis copies here (leanrea rule: work on a copy).</div>
             </template>
             <template x-for="ws in $store.reaStore.workspaces" :key="ws.name">
               <div class="rea-ws">
                 <span class="rea-ws-name" x-text="ws.name"></span>
-                <span class="rea-ws-meta" x-text="ws.files + ' bestanden, ' + $store.reaStore.formatBytes(ws.bytes)"></span>
-                <button type="button" class="rea-del" title="Verwijderen" @click="$store.reaStore.deleteWorkspace(ws.name)">
+                <span class="rea-ws-meta" x-text="ws.files + ' files, ' + $store.reaStore.formatBytes(ws.bytes)"></span>
+                <button type="button" class="rea-del" title="Delete" @click="$store.reaStore.deleteWorkspace(ws.name)">
                   <x-icon name="delete" aria-hidden="true"></x-icon>
                 </button>
               </div>
@@ -71,17 +71,17 @@
         <template x-if="$store.reaStore.tab === 'history'">
           <div class="rea-section">
             <div class="rea-row">
-              <input type="text" placeholder="notitie, bijv. 'asar geëxtraheerd, IPC-channels gevonden'" spellcheck="false"
+              <input type="text" placeholder="note, e.g. 'asar extracted, IPC channels found'" spellcheck="false"
                      x-model="$store.reaStore.noteText"
                      @keydown.enter="$store.reaStore.addNote()" />
               <button type="button" class="btn" :disabled="$store.reaStore.busy || !$store.reaStore.noteText.trim()"
-                      @click="$store.reaStore.addNote()">Notitie</button>
-              <button type="button" class="rea-del" title="Historiek wissen" @click="$store.reaStore.clearHistory()">
+                      @click="$store.reaStore.addNote()">Note</button>
+              <button type="button" class="rea-del" title="Clear history" @click="$store.reaStore.clearHistory()">
                 <x-icon name="delete_sweep" aria-hidden="true"></x-icon>
               </button>
             </div>
             <template x-if="$store.reaStore.history.length === 0">
-              <div class="rea-empty">Nog geen historiek.</div>
+              <div class="rea-empty">No history yet.</div>
             </template>
             <template x-for="entry in $store.reaStore.history" :key="entry.id">
               <div class="rea-entry">
@@ -89,7 +89,7 @@
                 <span class="rea-entry-ws" x-show="entry.workspace" x-text="entry.workspace"></span>
                 <span class="rea-entry-details" x-text="entry.details"></span>
                 <span class="rea-entry-ts" x-text="entry.ts"></span>
-                <button type="button" class="rea-del" title="Regel verwijderen" @click="$store.reaStore.removeEntry(entry.id)">
+                <button type="button" class="rea-del" title="Remove entry" @click="$store.reaStore.removeEntry(entry.id)">
                   <x-icon name="close" aria-hidden="true"></x-icon>
                 </button>
               </div>

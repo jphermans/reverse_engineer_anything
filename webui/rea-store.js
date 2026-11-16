@@ -47,7 +47,7 @@ export const store = createStore("reaStore", {
       this.categories = data.categories || [];
       this.summary = data.summary || { available: 0, total: 0, missing: [] };
     } catch (e) {
-      toastFrontendError("Tool-inventaris ophalen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Failed to load tool inventory: " + e.message, "Reverse Engineer Anything");
     }
   },
 
@@ -57,7 +57,7 @@ export const store = createStore("reaStore", {
       this.workspaces = data.workspaces || [];
       this.workspaceRoot = data.workspace_root || "";
     } catch (e) {
-      toastFrontendError("Werkruimtes ophalen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Failed to load workspaces: " + e.message, "Reverse Engineer Anything");
     }
   },
 
@@ -67,7 +67,7 @@ export const store = createStore("reaStore", {
       this.history = data.entries || [];
       this.historyLimit = data.history_limit || 200;
     } catch (e) {
-      toastFrontendError("Historiek ophalen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Failed to load history: " + e.message, "Reverse Engineer Anything");
     }
   },
 
@@ -79,13 +79,13 @@ export const store = createStore("reaStore", {
       const res = await callJsonApi(`${API}/workspace`, { action: "create", name });
       if (res.status === "ok") {
         this.newWorkspaceName = "";
-        toastFrontendSuccess(`Werkruimte '${name}' aangemaakt.`, "Reverse Engineer Anything");
+        toastFrontendSuccess(`Workspace '${name}' created.`, "Reverse Engineer Anything");
         await Promise.all([this.loadWorkspaces(), this.loadHistory()]);
       } else {
-        toastFrontendError(res.error || "Aanmaken mislukt.", "Reverse Engineer Anything");
+        toastFrontendError(res.error || "Create failed.", "Reverse Engineer Anything");
       }
     } catch (e) {
-      toastFrontendError("Aanmaken mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Create failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
     }
@@ -93,18 +93,18 @@ export const store = createStore("reaStore", {
 
   async deleteWorkspace(name) {
     if (this.busy) return;
-    if (!window.confirm(`Werkruimte '${name}' echt verwijderen? Alle bestanden in deze werkruimte gaan verloren.`)) return;
+    if (!window.confirm(`Really delete workspace '${name}'? All files in this workspace will be lost.`)) return;
     this.busy = true;
     try {
       const res = await callJsonApi(`${API}/workspace`, { action: "delete", name, confirm: true });
       if (res.status === "ok") {
-        toastFrontendSuccess(`Werkruimte '${name}' verwijderd.`, "Reverse Engineer Anything");
+        toastFrontendSuccess(`Workspace '${name}' deleted.`, "Reverse Engineer Anything");
         await Promise.all([this.loadWorkspaces(), this.loadHistory()]);
       } else {
-        toastFrontendError(res.error || "Verwijderen mislukt.", "Reverse Engineer Anything");
+        toastFrontendError(res.error || "Delete failed.", "Reverse Engineer Anything");
       }
     } catch (e) {
-      toastFrontendError("Verwijderen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Delete failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
     }
@@ -124,10 +124,10 @@ export const store = createStore("reaStore", {
         this.noteText = "";
         await this.loadHistory();
       } else {
-        toastFrontendError(res.error || "Notitie opslaan mislukt.", "Reverse Engineer Anything");
+        toastFrontendError(res.error || "Failed to save note.", "Reverse Engineer Anything");
       }
     } catch (e) {
-      toastFrontendError("Notitie opslaan mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Failed to save note: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
     }
@@ -140,7 +140,7 @@ export const store = createStore("reaStore", {
       await callJsonApi(`${API}/history_action`, { action: "remove", id });
       await this.loadHistory();
     } catch (e) {
-      toastFrontendError("Verwijderen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Delete failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
     }
@@ -148,13 +148,13 @@ export const store = createStore("reaStore", {
 
   async clearHistory() {
     if (this.busy) return;
-    if (!window.confirm("De volledige analysehistoriek wissen?")) return;
+    if (!window.confirm("Clear the entire analysis history?")) return;
     this.busy = true;
     try {
       await callJsonApi(`${API}/history_action`, { action: "clear", confirm: true });
       await this.loadHistory();
     } catch (e) {
-      toastFrontendError("Wissen mislukt: " + e.message, "Reverse Engineer Anything");
+      toastFrontendError("Clear failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
     }
@@ -187,9 +187,9 @@ export const store = createStore("reaStore", {
         .then((m) => {
           const fn = m.openModal || m.default;
           if (typeof fn === "function") fn(url);
-          else toastFrontendError("Modal openen niet beschikbaar.", "Reverse Engineer Anything");
+          else toastFrontendError("Opening modals is not available.", "Reverse Engineer Anything");
         })
-        .catch(() => toastFrontendError("Modal openen mislukt.", "Reverse Engineer Anything"));
+        .catch(() => toastFrontendError("Failed to open modal.", "Reverse Engineer Anything"));
     }
   },
 });
