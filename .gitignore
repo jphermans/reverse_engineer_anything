@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.a0proj/
+*.zip
+.DS_Store

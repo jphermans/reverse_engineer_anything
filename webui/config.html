@@ -1,0 +1,46 @@
+<html>
+<head>
+  <title>Reverse Engineer Anything</title>
+  <script type="module">
+    import { store } from "/components/plugins/plugin-settings-store.js";
+  </script>
+</head>
+
+<body>
+  <div x-data="{
+    initConfig() {
+      if (typeof config.workspace_root !== 'string' || !config.workspace_root.trim()) {
+        config.workspace_root = '/a0/usr/workdir/rea';
+      }
+      const limit = Number(config.history_limit);
+      config.history_limit = Number.isFinite(limit) ? Math.min(2000, Math.max(10, Math.round(limit))) : 200;
+    }
+  }" x-init="initConfig()">
+
+    <div class="field">
+      <div class="field-label">
+        <div class="field-title">Werkruimte-root</div>
+        <div class="field-description">
+          Map waarin analyse-werkruimtes worden aangemaakt (leanrea-regel: werk altijd op een kopie).
+          Standaard: /a0/usr/workdir/rea. Bij een aangepast pad maakt de plugin de map automatisch aan
+          bij gebruik; bij verwijderen van de plugin blijft deze map bewust bestaan (gebruikersdata).
+        </div>
+      </div>
+      <div class="field-control">
+        <input type="text" spellcheck="false" x-model="config.workspace_root" placeholder="/a0/usr/workdir/rea" />
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <div class="field-title">Historiek-limiet</div>
+        <div class="field-description">Maximale aantal bewaarde historieke-regels (10–2000, standaard 200).</div>
+      </div>
+      <div class="field-control">
+        <input type="number" min="10" max="2000" step="10" x-model.number="config.history_limit" />
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

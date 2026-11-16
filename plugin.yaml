@@ -1,0 +1,13 @@
+name: reverse_engineer_anything
+version: 0.1.0
+title: Reverse Engineer Anything
+description: >-
+  Workbench for reverse engineering with the leanrea method: a live tool
+  inventory per target category, managed copy-first analysis workspaces,
+  and a history of analysis actions. Based on leanrea
+  (https://github.com/aicodeking/leanrea), the skill that provides the
+  reverse engineering method this workbench serves.
+settings_sections:
+  - developer
+per_project_config: false
+per_agent_config: false
