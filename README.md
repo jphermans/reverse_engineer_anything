@@ -1,6 +1,8 @@
-# Reverse Engineer Anything
+# Reverse Engineer Anything (Agent Zero plugin)
 
-Agent Zero plugin v0.1.0: the workbench for reverse engineering with the leanrea method.
+![Version](https://img.shields.io/badge/version-v0.2.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+
+Agent Zero plugin v0.2.1: the workbench for reverse engineering with the leanrea method.
 
 ## Based on leanrea
 
@@ -20,7 +22,7 @@ The plugin adds no analysis capability; the agent runs the analysis itself with 
 
 ## Installation
 
-Copy the plugin directory to `/a0/usr/plugins/reverse_engineer_anything/` (or install via zip/git in the Plugins screen). Once loaded, a floating **REA** button sits at the right edge of the chat area; clicking it opens the workbench. The button stays visible on narrow screens, and the workbench is responsive down to phone widths.
+Copy the plugin directory to `/a0/usr/plugins/reverse_engineer_anything/` (or install via zip/git in the Plugins screen). Once loaded, the **Reverse Engineer Anything** workbench opens from the vertical canvas rail on the right edge of the screen, next to Files, Swarm, Harness and Jev Router. On narrow screens (769 px and below) the rail is hidden and a floating button below the top bar opens the same workbench. The workbench is responsive down to phone widths.
 
 The plugin has no external dependencies, no credentials and no background processes. `install()` only creates the default workspace root; with a custom root that happens automatically on first use.
 
@@ -55,6 +57,25 @@ The agent can also call the API routes itself to update the workbench, and consu
 ## Uninstall
 
 Remove the plugin via the Plugins screen. The workspace root (with workspaces and history) deliberately survives: that is user data. Delete `/a0/usr/workdir/rea` yourself if you no longer need it.
+
+## Uploading files
+
+Open the workbench (canvas rail on desktop, floating button on narrow screens), go to the **Workspaces** tab:
+
+1. Type the workspace name to upload into (for example `app-v1`); it is created automatically on first upload.
+2. Click **Upload** and select one or more files.
+3. A folder does not upload directly: zip it first (for example `myapp.zip`). Zips are extracted automatically into the workspace, so the original folder structure is preserved.
+4. The upload is the analysis copy; the original on your computer is never touched. Then ask the agent in chat to analyze that workspace with leanrea.
+
+## Versions
+
+| Label | Release | Highlights |
+|---|---|---|
+| `v0.1.0` | Initial release | Tool inventory, workspaces, history, WebUI workbench (modal) |
+| `v0.2.0` | Upload feature | Upload files/zips into workspaces with zip-slip protection, floating launcher button |
+| `v0.2.1` | Canvas rail | Workbench as right-canvas surface next to Files, Swarm, Harness and Jev Router; floating button now mobile-only; A0 plugin badges |
+
+Tags are published in the repository for every release (`git tag` / GitHub releases list).
 
 ## License
 

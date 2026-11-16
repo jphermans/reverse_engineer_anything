@@ -1,0 +1,159 @@
+<div x-data>
+  <template x-if="$store.reaStore">
+    <div class="rea-workbench" x-init="$store.reaStore.onOpen()" x-destroy="$store.reaStore.cleanup()">
+
+      <div class="rea-tabs">
+        <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'tools' }" @click="$store.reaStore.tab = 'tools'">Tools</button>
+        <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'workspaces' }" @click="$store.reaStore.tab = 'workspaces'">Workspaces</button>
+        <button type="button" class="rea-tab" :class="{ active: $store.reaStore.tab === 'history' }" @click="$store.reaStore.tab = 'history'">History</button>
+        <button type="button" class="rea-refresh" title="Refresh" :disabled="$store.reaStore.busy" @click="$store.reaStore.refreshAll()">
+          <x-icon name="refresh" aria-hidden="true"></x-icon>
+        </button>
+      </div>
+
+      <template x-if="$store.reaStore.tab === 'tools'">
+        <div class="rea-section">
+          <div class="rea-summary">
+            <span x-text="$store.reaStore.toolLabel + ' tools available'"></span>
+            <span class="rea-missing" x-show="$store.reaStore.summary.missing.length"
+                  x-text="'missing: ' + $store.reaStore.summary.missing.join(', ')"></span>
+            <span class="rea-install-note">Missing tools are never installed automatically; the agent proposes the install command and runs it only after your approval.</span>
+          </div>
+          <template x-for="cat in $store.reaStore.categories" :key="cat.key">
+            <div class="rea-cat">
+              <div class="rea-cat-title" x-text="cat.label"></div>
+              <template x-for="tool in cat.tools" :key="tool.name">
+                <div class="rea-tool" :class="tool.available ? 'ok' : 'no'">
+                  <span class="rea-dot" aria-hidden="true"></span>
+                  <span class="rea-tool-name" x-text="tool.name"></span>
+                  <span class="rea-tool-note" x-text="tool.note"></span>
+                  <span class="rea-hint" x-show="!tool.available && tool.hint" x-text="'Proposed install: ' + tool.hint"></span>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="$store.reaStore.tab === 'workspaces'">
+        <div class="rea-section">
+          <div class="rea-row rea-upload-row">
+            <input type="text" placeholder="upload into workspace, e.g. app-v1" spellcheck="false"
+                   x-model="$store.reaStore.uploadWorkspace" />
+            <label class="btn rea-upload-btn" :class="{ disabled: $store.reaStore.uploadBusy }">
+              <input type="file" multiple style="display:none"
+                     @change="$store.reaStore.uploadFiles($event.target.files); $event.target.value=''" />
+              <span x-text="$store.reaStore.uploadBusy ? 'Uploading…' : 'Upload'">Upload</span>
+            </label>
+          </div>
+          <div class="rea-upload-note">Files and folders (as zip) land directly inside the workspace; zips are extracted automatically. The upload is the analysis copy. Then ask the agent in chat to analyze that workspace with leanrea.</div>
+          <div class="rea-row">
+            <input type="text" placeholder="workspace name, e.g. app-v1" spellcheck="false"
+                   x-model="$store.reaStore.newWorkspaceName"
+                   @keydown.enter="$store.reaStore.createWorkspace()" />
+            <button type="button" class="btn" :disabled="$store.reaStore.busy || !$store.reaStore.newWorkspaceName.trim()"
+                    @click="$store.reaStore.createWorkspace()">Create</button>
+          </div>
+          <div class="rea-root" x-text="'Root: ' + $store.reaStore.workspaceRoot"></div>
+          <template x-if="$store.reaStore.workspaces.length === 0">
+            <div class="rea-empty">No workspaces yet. Create one and let the agent place its analysis copies here (leanrea rule: work on a copy).</div>
+          </template>
+          <template x-for="ws in $store.reaStore.workspaces" :key="ws.name">
+            <div class="rea-ws">
+              <span class="rea-ws-name" x-text="ws.name"></span>
+              <span class="rea-ws-meta" x-text="ws.files + ' files, ' + $store.reaStore.formatBytes(ws.bytes)"></span>
+              <button type="button" class="rea-del" title="Delete" @click="$store.reaStore.deleteWorkspace(ws.name)">
+                <x-icon name="delete" aria-hidden="true"></x-icon>
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="$store.reaStore.tab === 'history'">
+        <div class="rea-section">
+          <div class="rea-row">
+            <input type="text" placeholder="note, e.g. 'asar extracted, IPC channels found'" spellcheck="false"
+                   x-model="$store.reaStore.noteText"
+                   @keydown.enter="$store.reaStore.addNote()" />
+            <button type="button" class="btn" :disabled="$store.reaStore.busy || !$store.reaStore.noteText.trim()"
+                    @click="$store.reaStore.addNote()">Note</button>
+            <button type="button" class="rea-del" title="Clear history" @click="$store.reaStore.clearHistory()">
+              <x-icon name="delete_sweep" aria-hidden="true"></x-icon>
+            </button>
+          </div>
+          <template x-if="$store.reaStore.history.length === 0">
+            <div class="rea-empty">No history yet.</div>
+          </template>
+          <template x-for="entry in $store.reaStore.history" :key="entry.id">
+            <div class="rea-entry">
+              <span class="rea-entry-action" x-text="entry.action"></span>
+              <span class="rea-entry-ws" x-show="entry.workspace" x-text="entry.workspace"></span>
+              <span class="rea-entry-details" x-text="entry.details"></span>
+              <span class="rea-entry-ts" x-text="entry.ts"></span>
+              <button type="button" class="rea-del" title="Remove entry" @click="$store.reaStore.removeEntry(entry.id)">
+                <x-icon name="close" aria-hidden="true"></x-icon>
+              </button>
+            </div>
+          </template>
+        </div>
+      </template>
+
+    </div>
+  </template>
+
+  <style>
+    .rea-workbench { width: min(96vw, 640px); }
+    .rea-canvas-surface .rea-workbench { width: 100%; }
+    .rea-tabs { display: flex; gap: 0.25rem; align-items: center; margin-bottom: 0.75rem; }
+    .rea-tab {
+      border: none; background: transparent; color: inherit; cursor: pointer;
+      padding: 0.35rem 0.8rem; border-radius: 0.5rem; font-size: 0.9rem;
+    }
+    .rea-tab.active { background: rgba(128, 128, 128, 0.18); font-weight: 600; }
+    .rea-refresh { margin-left: auto; border: none; background: transparent; color: inherit; cursor: pointer; padding: 0.3rem; border-radius: 0.4rem; }
+    .rea-refresh:hover { background: rgba(128, 128, 128, 0.15); }
+    .rea-section { display: flex; flex-direction: column; gap: 0.5rem; max-height: 55vh; overflow-y: auto; }
+    .rea-summary { font-size: 0.85rem; opacity: 0.9; display: flex; flex-direction: column; gap: 0.15rem; }
+    .rea-missing { font-size: 0.75rem; opacity: 0.65; }
+    .rea-cat-title { font-weight: 600; font-size: 0.8rem; margin-top: 0.4rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.04em; }
+    .rea-tool { display: flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; padding: 0.15rem 0; }
+    .rea-tool-name { font-family: monospace; font-weight: 600; min-width: 9rem; }
+    .rea-tool-note { opacity: 0.75; font-size: 0.78rem; flex: 1; }
+    .rea-hint { font-size: 0.72rem; opacity: 0.6; font-style: italic; }
+    .rea-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; }
+    .rea-tool.ok .rea-dot { background: rgb(34, 197, 94); }
+    .rea-tool.no .rea-dot { background: rgb(234, 179, 8); }
+    .rea-row { display: flex; gap: 0.4rem; align-items: center; }
+    .rea-row input[type="text"] { flex: 1; }
+    .rea-root { font-size: 0.72rem; opacity: 0.6; font-family: monospace; }
+    .rea-ws, .rea-entry {
+      display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem;
+      padding: 0.35rem 0.5rem; border-radius: 0.4rem; background: rgba(128, 128, 128, 0.08);
+    }
+    .rea-ws-name { font-weight: 600; }
+    .rea-ws-meta { opacity: 0.65; font-size: 0.75rem; margin-left: auto; }
+    .rea-entry-action { font-size: 0.7rem; text-transform: uppercase; opacity: 0.7; }
+    .rea-entry-ws { font-size: 0.75rem; font-weight: 600; }
+    .rea-entry-details { font-size: 0.8rem; opacity: 0.85; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rea-entry-ts { font-size: 0.68rem; opacity: 0.5; }
+    .rea-del { border: none; background: transparent; color: inherit; cursor: pointer; padding: 0.2rem; border-radius: 0.3rem; opacity: 0.6; }
+    .rea-del:hover { opacity: 1; background: rgba(128, 128, 128, 0.15); }
+    .rea-empty { font-size: 0.85rem; opacity: 0.65; padding: 0.5rem 0; }
+    .rea-upload-btn { cursor: pointer; white-space: nowrap; }
+    .rea-upload-btn.disabled { opacity: 0.6; pointer-events: none; }
+    .rea-upload-note { font-size: 0.72rem; opacity: 0.6; }
+    .rea-install-note { font-size: 0.72rem; opacity: 0.6; }
+    @media (max-width: 768px) {
+      .rea-row { flex-direction: column; align-items: stretch; }
+      .rea-tool { flex-wrap: wrap; row-gap: 0.15rem; }
+      .rea-tool-name { min-width: 0; }
+      .rea-hint { overflow-wrap: anywhere; }
+      .rea-ws, .rea-entry { flex-wrap: wrap; }
+      .rea-entry-details { white-space: normal; }
+      .rea-tab { padding: 0.5rem 0.9rem; }
+      .rea-del, .rea-refresh { padding: 0.45rem; }
+      .rea-section { max-height: 60vh; }
+    }
+  </style>
+</div>

@@ -48,10 +48,11 @@ export default function initReaLauncher() {
     #rea-launcher:hover { opacity: 1; }
     /* The top bar (time-date-container) spans the top-right corner at every
        width and sits above this button, so keep the launcher below the bar
-       to stay reachable on all screen sizes. On desktop widths the vertical
-       canvas rail occupies the right edge, so shift the launcher left of it. */
+       to stay reachable on narrow screens. Since v0.2.1 the REA workbench
+       lives in the canvas rail on desktop (register-rea.js), so the floating
+       button is mobile-only. */
     @media (min-width: 769px) {
-      #rea-launcher { right: 60px; }
+      #rea-launcher { display: none; }
     }
   `;
   document.head.appendChild(style);
