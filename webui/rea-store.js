@@ -1,5 +1,5 @@
 import { createStore } from "/js/AlpineStore.js";
-import { callJsonApi } from "/js/api.js";
+import { callJsonApi, fetchApi } from "/js/api.js";
 import {
   toastFrontendError,
   toastFrontendSuccess,
@@ -22,6 +22,9 @@ export const store = createStore("reaStore", {
   historyLimit: 200,
   noteText: "",
   noteWorkspace: "",
+  // uploads
+  uploadWorkspace: "",
+  uploadBusy: false,
 
   init() {},
 
@@ -157,6 +160,43 @@ export const store = createStore("reaStore", {
       toastFrontendError("Clear failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.busy = false;
+    }
+  },
+
+  async uploadFiles(fileList) {
+    if (this.uploadBusy) return;
+    const name = (this.uploadWorkspace || "").trim();
+    if (!name) {
+      toastFrontendError("Enter a workspace name for the upload first.", "Reverse Engineer Anything");
+      return;
+    }
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    this.uploadBusy = true;
+    try {
+      const fd = new FormData();
+      fd.append("workspace", name);
+      for (const file of files) fd.append("files", file, file.name);
+      const res = await fetchApi(`${API}/upload`, { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      const failed = (data.uploads || []).filter((u) => u.status === "error");
+      if (data.status === "ok" && !failed.length) {
+        const parts = (data.uploads || []).map(
+          (u) => u.filename + (u.extracted ? ` (extracted ${u.extracted} files)` : "")
+        );
+        toastFrontendSuccess(
+          "Uploaded into '" + name + "': " + parts.join(", "),
+          "Reverse Engineer Anything"
+        );
+      } else {
+        const msg = (failed[0] && failed[0].error) || data.error || "Upload failed.";
+        toastFrontendError(msg, "Reverse Engineer Anything");
+      }
+      await Promise.all([this.loadWorkspaces(), this.loadHistory()]);
+    } catch (e) {
+      toastFrontendError("Upload failed: " + e.message, "Reverse Engineer Anything");
+    } finally {
+      this.uploadBusy = false;
     }
   },
 

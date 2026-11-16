@@ -8,7 +8,7 @@ and history are user files, not plugin-owned resources).
 
 import os
 
-from helpers import plugins
+from helpers.plugins import get_plugin_config
 
 PLUGIN_NAME = "reverse_engineer_anything"
 DEFAULT_ROOT = "/a0/usr/workdir/rea"
@@ -17,7 +17,7 @@ DEFAULT_ROOT = "/a0/usr/workdir/rea"
 def install() -> None:
     """Prepare the default workspace root. Safe to rerun."""
     try:
-        settings = plugins.get_plugin_config(PLUGIN_NAME) or {}
+        settings = get_plugin_config(PLUGIN_NAME) or {}
     except Exception:
         settings = {}
     root = str(settings.get("workspace_root") or DEFAULT_ROOT).strip() or DEFAULT_ROOT

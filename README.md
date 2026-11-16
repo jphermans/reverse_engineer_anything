@@ -10,15 +10,17 @@ This plugin is built on [leanrea](https://github.com/aicodeking/leanrea), the sk
 
 The [leanrea skill](https://github.com/aicodeking/leanrea) gives the agent the *method* to reverse engineer software. This plugin provides the *workplace* in the Agent Zero WebUI:
 
-1. **Tool inventory** - live overview of reverse engineering tools in the container, grouped per leanrea category (basic, native binaries, Electron/JS, mobile, firmware, WASM, data/network, Go/Rust/.NET, decompilers). Per tool: available or not, what it does, and an install hint when missing.
+1. **Tool inventory** - live overview of reverse engineering tools in the container, grouped per leanrea category (basic, native binaries, Electron/JS, mobile, firmware, WASM, data/network, Go/Rust/.NET, decompilers). Per tool: available or not, what it does, and a proposed install command when missing.
 2. **Workspaces** - managed analysis directories under one root (default `/a0/usr/workdir/rea`), following the leanrea rule: always work on a copy. Create and delete from the WebUI; names are validated and stay inside the root.
 3. **History** - log of workspace actions and notes (JSONL in the workspace root), with a limit setting and separate delete actions.
+
+**Missing tools are proposed, never auto-installed.** The inventory is read-only: it never downloads or installs anything on its own. Every missing tool shows a proposed install command (for example `apt-get install file`), and when an analysis actually needs that tool the agent proposes running it and waits for your approval. Manually installed tools do not survive a pod recreation; the inventory will flag them as missing again.
 
 The plugin adds no analysis capability; the agent runs the analysis itself with the leanrea skill and the tools in the container. The plugin makes the work visible, repeatable and cleanable.
 
 ## Installation
 
-Copy the plugin directory to `/a0/usr/plugins/reverse_engineer_anything/` (or install via zip/git in the Plugins screen). Once loaded, the **REA** button appears in the sidebar; clicking it opens the workbench.
+Copy the plugin directory to `/a0/usr/plugins/reverse_engineer_anything/` (or install via zip/git in the Plugins screen). Once loaded, a floating **REA** button sits at the right edge of the chat area; clicking it opens the workbench. The button stays visible on narrow screens, and the workbench is responsive down to phone widths.
 
 The plugin has no external dependencies, no credentials and no background processes. `install()` only creates the default workspace root; with a custom root that happens automatically on first use.
 
@@ -38,6 +40,7 @@ The plugin has no external dependencies, no credentials and no background proces
 | `/api/plugins/reverse_engineer_anything/workspace` | POST | `create` (name) or `delete` (name + confirm) |
 | `/api/plugins/reverse_engineer_anything/history` | GET/POST | History listing (read-only) |
 | `/api/plugins/reverse_engineer_anything/history_action` | POST | `note` (text, workspace?), `remove` (id), `clear` (confirm) |
+| `/api/plugins/reverse_engineer_anything/upload` | POST | Multipart upload (`workspace` + `files`); zips are extracted into the workspace |
 
 Mutation routes use the standard Agent Zero CSRF policy; read-only routes allow GET polling.
 

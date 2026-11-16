@@ -26,6 +26,7 @@
               <span x-text="$store.reaStore.toolLabel + ' tools available'"></span>
               <span class="rea-missing" x-show="$store.reaStore.summary.missing.length"
                     x-text="'missing: ' + $store.reaStore.summary.missing.join(', ')"></span>
+              <span class="rea-install-note">Missing tools are never installed automatically; the agent proposes the install command and runs it only after your approval.</span>
             </div>
             <template x-for="cat in $store.reaStore.categories" :key="cat.key">
               <div class="rea-cat">
@@ -35,7 +36,7 @@
                     <span class="rea-dot" aria-hidden="true"></span>
                     <span class="rea-tool-name" x-text="tool.name"></span>
                     <span class="rea-tool-note" x-text="tool.note"></span>
-                    <span class="rea-hint" x-show="!tool.available && tool.hint" x-text="tool.hint"></span>
+                    <span class="rea-hint" x-show="!tool.available && tool.hint" x-text="'Proposed install: ' + tool.hint"></span>
                   </div>
                 </template>
               </div>
@@ -45,6 +46,16 @@
 
         <template x-if="$store.reaStore.tab === 'workspaces'">
           <div class="rea-section">
+            <div class="rea-row rea-upload-row">
+              <input type="text" placeholder="upload into workspace, e.g. app-v1" spellcheck="false"
+                     x-model="$store.reaStore.uploadWorkspace" />
+              <label class="btn rea-upload-btn" :class="{ disabled: $store.reaStore.uploadBusy }">
+                <input type="file" multiple style="display:none"
+                       @change="$store.reaStore.uploadFiles($event.target.files); $event.target.value=''" />
+                <span x-text="$store.reaStore.uploadBusy ? 'Uploading…' : 'Upload'">Upload</span>
+              </label>
+            </div>
+            <div class="rea-upload-note">Files and folders (as zip) land directly inside the workspace; zips are extracted automatically. The upload is the analysis copy. Then ask the agent in chat to analyze that workspace with leanrea.</div>
             <div class="rea-row">
               <input type="text" placeholder="workspace name, e.g. app-v1" spellcheck="false"
                      x-model="$store.reaStore.newWorkspaceName"
@@ -101,7 +112,7 @@
     </template>
 
     <style>
-      .rea-workbench { min-width: 420px; max-width: 640px; }
+      .rea-workbench { width: min(96vw, 640px); }
       .rea-tabs { display: flex; gap: 0.25rem; align-items: center; margin-bottom: 0.75rem; }
       .rea-tab {
         border: none; background: transparent; color: inherit; cursor: pointer;
@@ -137,6 +148,21 @@
       .rea-del { border: none; background: transparent; color: inherit; cursor: pointer; padding: 0.2rem; border-radius: 0.3rem; opacity: 0.6; }
       .rea-del:hover { opacity: 1; background: rgba(128, 128, 128, 0.15); }
       .rea-empty { font-size: 0.85rem; opacity: 0.65; padding: 0.5rem 0; }
+      .rea-upload-btn { cursor: pointer; white-space: nowrap; }
+      .rea-upload-btn.disabled { opacity: 0.6; pointer-events: none; }
+      .rea-upload-note { font-size: 0.72rem; opacity: 0.6; }
+      .rea-install-note { font-size: 0.72rem; opacity: 0.6; }
+      @media (max-width: 768px) {
+        .rea-row { flex-direction: column; align-items: stretch; }
+        .rea-tool { flex-wrap: wrap; row-gap: 0.15rem; }
+        .rea-tool-name { min-width: 0; }
+        .rea-hint { overflow-wrap: anywhere; }
+        .rea-ws, .rea-entry { flex-wrap: wrap; }
+        .rea-entry-details { white-space: normal; }
+        .rea-tab { padding: 0.5rem 0.9rem; }
+        .rea-del, .rea-refresh { padding: 0.45rem; }
+        .rea-section { max-height: 60vh; }
+      }
     </style>
   </div>
 </body>
