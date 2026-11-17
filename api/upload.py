@@ -9,7 +9,7 @@ the browser adds the X-CSRF-Token header via fetchApi.
 
 from helpers.api import ApiHandler, Input, Output, Request
 
-from usr.plugins.reverse_engineer_anything.helpers import state, upload, workspace
+from usr.plugins.reverse_engineer_anything.helpers import activity, state, upload, workspace
 
 
 class Upload(ApiHandler):
@@ -37,6 +37,11 @@ class Upload(ApiHandler):
 
         settings = state.load_settings()
         root = settings["workspace_root"]
+        activity.start(
+            root,
+            "upload",
+            f"{len(files)} file(s) -> {ws_name}",
+        )
 
         uploads = []
         had_error = False
@@ -47,6 +52,23 @@ class Upload(ApiHandler):
             except (workspace.WorkspaceError, upload.UploadError) as exc:
                 had_error = True
                 uploads.append({"filename": fs.filename, "status": "error", "error": str(exc)})
+
+        if had_error:
+            failed = [u for u in uploads if u["status"] == "error"]
+            activity.finish(
+                root,
+                "upload",
+                f"{len(failed)} file(s) failed in {ws_name}",
+                ok=False,
+            )
+        else:
+            extracted = sum(u.get("extracted", 0) for u in uploads)
+            activity.finish(
+                root,
+                "upload",
+                f"{len(uploads)} file(s) into {ws_name}"
+                + (f" ({extracted} extracted)" if extracted else ""),
+            )
 
         return {
             "status": "error" if had_error else "ok",

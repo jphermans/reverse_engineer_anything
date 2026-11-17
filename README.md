@@ -1,8 +1,8 @@
 # Reverse Engineer Anything (Agent Zero plugin)
 
-![Version](https://img.shields.io/badge/version-v0.2.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+![Version](https://img.shields.io/badge/version-v0.3.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
 
-Agent Zero plugin v0.2.1: the workbench for reverse engineering with the leanrea method.
+Agent Zero plugin v0.3.0: the workbench for reverse engineering with the leanrea method.
 
 ## Based on leanrea
 
@@ -74,6 +74,7 @@ Open the workbench (canvas rail on desktop, floating button on narrow screens), 
 | `v0.1.0` | Initial release | Tool inventory, workspaces, history, WebUI workbench (modal) |
 | `v0.2.0` | Upload feature | Upload files/zips into workspaces with zip-slip protection, floating launcher button |
 | `v0.2.1` | Canvas rail | Workbench as right-canvas surface next to Files, Swarm, Harness and Jev Router; floating button now mobile-only; A0 plugin badges |
+| `v0.3.0` | Live sidebar | Sidebar indicator shows what the plugin is doing right now and the result when finished; clear warning toast when RE tools are missing (with install hints, nothing installed automatically) |
 
 Tags are published in the repository for every release (`git tag` / GitHub releases list).
 

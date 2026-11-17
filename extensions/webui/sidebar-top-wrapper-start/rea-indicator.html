@@ -1,0 +1,113 @@
+<script type="module">
+  import { store } from "/plugins/reverse_engineer_anything/webui/rea-store.js";
+</script>
+
+<div x-data>
+  <template x-if="$store.reaStore">
+    <div class="rea-indicator-root"
+         x-create="$store.reaStore.startSidebar()"
+         x-destroy="$store.reaStore.stopSidebar()">
+      <button type="button"
+              class="rea-indicator"
+              :class="$store.reaStore.activityStatusClass"
+              title="Reverse Engineer Anything - open workbench"
+              aria-label="Reverse Engineer Anything activity"
+              @click="$store.rightCanvas?.open('rea')">
+        <span class="rea-indicator-dot" aria-hidden="true"></span>
+        <span class="rea-indicator-name">REA</span>
+        <span class="rea-indicator-label" x-text="$store.reaStore.activityLabel"></span>
+        <span class="rea-indicator-tools"
+              :class="$store.reaStore.toolClass"
+              x-text="$store.reaStore.toolLabel"
+              title="Available RE tools (click for the workbench Tools tab)"></span>
+      </button>
+    </div>
+  </template>
+</div>
+
+<style>
+  .rea-indicator-root {
+    padding: 4px 8px;
+  }
+
+  .rea-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border-light, rgba(128, 128, 128, 0.25));
+    border-radius: 10px;
+    background: var(--background-2, rgba(128, 128, 128, 0.08));
+    color: var(--text, inherit);
+    font-size: 12px;
+    line-height: 1.2;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .rea-indicator:hover {
+    background: var(--background-3, rgba(128, 128, 128, 0.16));
+  }
+
+  .rea-indicator-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--gray-500, #9e9e9e);
+  }
+
+  .rea-indicator.busy .rea-indicator-dot {
+    background: var(--warning, #f6a821);
+    animation: rea-pulse 1s ease-in-out infinite;
+  }
+
+  .rea-indicator.done .rea-indicator-dot {
+    background: var(--success, #34c759);
+  }
+
+  .rea-indicator.error .rea-indicator-dot {
+    background: var(--danger, #e5484d);
+  }
+
+  @keyframes rea-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+
+  .rea-indicator-name {
+    flex: 0 0 auto;
+    font-weight: 600;
+  }
+
+  .rea-indicator-label {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 0.85;
+  }
+
+  .rea-indicator-tools {
+    flex: 0 0 auto;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    background: rgba(128, 128, 128, 0.15);
+  }
+
+  .rea-indicator-tools.ok {
+    color: var(--success, #34c759);
+  }
+
+  .rea-indicator-tools.warn {
+    color: var(--warning, #f6a821);
+  }
+
+  .rea-indicator-tools.loading {
+    opacity: 0.5;
+  }
+</style>

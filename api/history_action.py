@@ -7,7 +7,7 @@ CSRF stays on (default) because all actions mutate user data.
 
 from helpers.api import ApiHandler, Input, Output, Request
 
-from usr.plugins.reverse_engineer_anything.helpers import state
+from usr.plugins.reverse_engineer_anything.helpers import activity, state
 
 
 class HistoryAction(ApiHandler):
@@ -26,22 +26,36 @@ class HistoryAction(ApiHandler):
             if action == "clear":
                 if not data.get("confirm"):
                     raise ValueError("Clearing requires confirmation (confirm=true).")
+                activity.start(root, "history_clear", "all entries")
                 removed = state.clear_history(root)
+                activity.finish(root, "history_clear", f"{removed} entries cleared")
                 return {"status": "ok", "action": "clear", "removed": removed}
             if action == "remove":
                 entry_id = str(data.get("id") or "").strip()
                 if not entry_id:
                     raise ValueError("Missing field: id.")
                 ok = state.remove_entry(root, entry_id)
+                activity.finish(
+                    root,
+                    "history_remove",
+                    "entry removed" if ok else "entry not found",
+                    ok=True,
+                )
                 return {"status": "ok", "action": "remove", "removed_entry": ok}
             if action == "note":
                 text = str(data.get("text") or "").strip()
                 if not text:
                     raise ValueError("Note is empty.")
                 ws = str(data.get("workspace") or "").strip() or None
+                activity.start(root, "note", (text[:60] + ("…" if len(text) > 60 else "")))
                 entry = state.add_history(
                     root,
                     {"action": "note", "workspace": ws, "details": text[:500]},
+                )
+                activity.finish(
+                    root,
+                    "note",
+                    "note saved" + (f" in {ws}" if ws else ""),
                 )
                 return {"status": "ok", "action": "note", "entry": entry}
             return {

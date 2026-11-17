@@ -25,8 +25,23 @@ export const store = createStore("reaStore", {
   // uploads
   uploadWorkspace: "",
   uploadBusy: false,
+  // live activity (sidebar indicator)
+  activity: { status: "idle", action: "", detail: "", ts: "" },
+  activityTimer: null,
+  sidebarOpen: false,
+  toolsWarned: false,
 
   init() {},
+  startSidebar() {
+    this.sidebarOpen = false;
+    this.startActivityPolling();
+    if (!this.loaded) this.loadTools();
+  },
+
+  stopSidebar() {
+    this.sidebarOpen = false;
+    this.stopActivityPolling();
+  },
 
   onOpen() {
     this.refreshAll();
@@ -49,6 +64,7 @@ export const store = createStore("reaStore", {
       const data = await callJsonApi(`${API}/tools`, {});
       this.categories = data.categories || [];
       this.summary = data.summary || { available: 0, total: 0, missing: [] };
+      this.warnMissingTools();
     } catch (e) {
       toastFrontendError("Failed to load tool inventory: " + e.message, "Reverse Engineer Anything");
     }
@@ -198,6 +214,65 @@ export const store = createStore("reaStore", {
     } finally {
       this.uploadBusy = false;
     }
+  },
+
+  warnMissingTools() {
+    if (this.toolsWarned) return;
+    const missing = (this.summary && this.summary.missing) || [];
+    if (!missing.length) return;
+    this.toolsWarned = true;
+    toastFrontendWarning(
+      "Missing RE tools: " + missing.join(", ") +
+      ". See the Tools tab for install commands (nothing is installed automatically).",
+      "Reverse Engineer Anything"
+    );
+  },
+
+  startActivityPolling() {
+    if (this.activityTimer) return;
+    this.pollActivity();
+    this.activityTimer = setInterval(() => this.pollActivity(), 4000);
+  },
+
+  stopActivityPolling() {
+    if (this.activityTimer) {
+      clearInterval(this.activityTimer);
+      this.activityTimer = null;
+    }
+  },
+
+  async pollActivity() {
+    try {
+      const data = await callJsonApi(`${API}/activity`, {});
+      this.activity = {
+        status: data.status || "idle",
+        action: data.action || "",
+        detail: data.detail || "",
+        ts: data.ts || "",
+      };
+    } catch (e) {
+      // Sidebar indicator stays silent on polling errors.
+    }
+  },
+
+  get activityVisible() {
+    return this.sidebarOpen;
+  },
+
+  get activityStatusClass() {
+    const s = this.activity && this.activity.status;
+    if (s === "busy") return "busy";
+    if (s === "done") return "done";
+    if (s === "error") return "error";
+    return "idle";
+  },
+
+  get activityLabel() {
+    const a = this.activity || {};
+    if (a.status === "busy") return "Working: " + (a.detail || a.action || "...");
+    if (a.status === "done") return "Done: " + (a.detail || a.action || "");
+    if (a.status === "error") return "Failed: " + (a.detail || a.action || "");
+    return "Idle";
   },
 
   get toolLabel() {
