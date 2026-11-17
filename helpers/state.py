@@ -5,7 +5,7 @@ import os
 import threading
 from datetime import datetime, timezone
 
-from helpers.plugins import get_plugin_config
+from helpers import plugins
 
 PLUGIN_NAME = "reverse_engineer_anything"
 DEFAULT_ROOT = "/a0/usr/workdir/rea"
@@ -17,7 +17,7 @@ _lock = threading.Lock()
 def load_settings() -> dict:
     """Resolve plugin settings with safe defaults."""
     try:
-        settings = get_plugin_config(PLUGIN_NAME) or {}
+        settings = plugins.get_plugin_config(PLUGIN_NAME) or {}
     except Exception:
         settings = {}
     root = str(settings.get("workspace_root") or DEFAULT_ROOT).strip() or DEFAULT_ROOT
