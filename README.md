@@ -1,8 +1,8 @@
 # Reverse Engineer Anything (Agent Zero plugin)
 
-![Version](https://img.shields.io/badge/version-v0.3.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+![Version](https://img.shields.io/badge/version-v0.3.2-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
 
-Agent Zero plugin v0.3.1: the workbench for reverse engineering with the leanrea method.
+Agent Zero plugin v0.3.2: the workbench for reverse engineering with the leanrea method.
 
 ## Based on leanrea
 
@@ -76,6 +76,7 @@ Open the workbench (canvas rail on desktop, floating button on narrow screens), 
 | `v0.2.1` | Canvas rail | Workbench as right-canvas surface next to Files, Swarm, Harness and Jev Router; floating button now mobile-only; A0 plugin badges |
 | `v0.3.0` | Live sidebar | Sidebar indicator shows what the plugin is doing right now and the result when finished; clear warning toast when RE tools are missing (with install hints, nothing installed automatically) |
 | `v0.3.1` | Bugfix | Fix "Failed to load settings": hooks.py again shadowed the framework hook name because a stale copy slipped into the v0.2.0 release commit; corrected import restored and regression-tested |
+| `v0.3.2` | Upload hardening | Size limits are enforced while reading (no full in-memory load); each zip is capped on total extracted size (1 GB), checked before extraction and counted during it; refused uploads leave no partial output; symlinked workspace dirs are refused on delete |
 
 Tags are published in the repository for every release (`git tag` / GitHub releases list).
 

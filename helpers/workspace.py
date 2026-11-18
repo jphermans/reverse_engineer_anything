@@ -76,6 +76,12 @@ def delete_workspace(root: str, name: str, confirm: bool) -> dict:
     name = validate_name(name)
     if not confirm:
         raise WorkspaceError("Deletion requires confirmation (confirm=true).")
+    # Test the symlink on the unresolved path: _workspace_path realpath-
+    # resolves first, and an islink test on the resolved path never fires.
+    base = os.path.realpath(root)
+    unresolved = os.path.join(base, name)
+    if os.path.islink(unresolved):
+        raise WorkspaceError("Workspace is a symlink; refusing to delete it.")
     path = _workspace_path(root, name)
     if not os.path.isdir(path):
         raise WorkspaceError("Workspace does not exist.")
