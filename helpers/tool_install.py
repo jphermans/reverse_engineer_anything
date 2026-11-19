@@ -164,6 +164,7 @@ def plan_payload(root, tools, runner=None):
         "disk_bytes": est["disk_bytes"],
         "download_human": installer.human_bytes(est["download_bytes"]),
         "disk_human": installer.human_bytes(est["disk_bytes"]),
+        "disk_estimated": est.get("disk_estimated", False),
         "command": (
             "apt-get install -y " + " ".join(planned["packages"])
             if planned["packages"]

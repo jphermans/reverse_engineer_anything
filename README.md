@@ -1,8 +1,12 @@
 # Reverse Engineer Anything (Agent Zero plugin)
 
-![Version](https://img.shields.io/badge/version-v0.5.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+![Version](https://img.shields.io/badge/version-v0.5.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
 
-Agent Zero plugin v0.5.0: the workbench for reverse engineering with the leanrea method.
+Agent Zero plugin v0.5.1: the workbench for reverse engineering with the leanrea method.
+
+## Tool persistence (container restarts)
+
+Tools installed through the workbench live in the container filesystem. When the Agent Zero container is replaced or restarted on a fresh image, installed tools are gone and must be installed again from the Tools tab (one click per tool or bundle, with the approval dialog). This is container behavior (ephemeral filesystem), not a plugin limitation: analysis workspaces, uploads and history live on the persistent volume and survive restarts. After a pod replacement the workbench shows a restore banner listing your previously approved tools.
 
 ## Based on leanrea
 
@@ -85,6 +89,7 @@ Open the workbench (canvas rail on desktop, floating button on narrow screens), 
 | `v0.4.1` | Sidebar icon fix | A real newline inside a string literal in `rea-store.js` broke its ESM parse; because the WebUI loads extension modules per extension point with Promise.all, one broken module dropped every canvas rail icon and the init chain (including REA's own icon). Fixed, and guarded by a CI step that parses every plugin JS file as ESM |
 | `v0.4.2` | Install hang fix | The apt size estimation (shown in the approval dialog) ran as a blocking subprocess inside the async API handler; while apt locks were held it froze the whole event loop for up to 120s per click, making the WebUI hang until a pod restart. The simulation now runs in a worker thread, a busy install short-circuits new clicks instantly, the timeout drops to 45s with a clear error, and an interrupted install (killed by a pod restart) is now reported explicitly by the status endpoint and as a UI toast |
 | `v0.5.0` | Install progress | While a tool installation runs, the workbench now shows a progress block in the Tools tab: phase-true percentage ( Updating package lists / Installing: <packages> / Running: <command> / Recording approved tools ), elapsed time and the last log lines. The sidebar indicator shows Working: installing <tools> for the whole job instead of only at the end |
+| `v0.5.1` | Approval dialog + real sizes | Safari silently suppressed the native `window.confirm` dialogs shown after an async step (install approval, workspace delete, history clear), so clicks appeared to do nothing; all three now use an in-workbench dialog. The dialog also showed 0 B because apt 3.x simulation no longer prints size lines; download size now falls back to apt-cache package metadata (exact) and disk usage to summed Installed-Size, shown as (est.) |
 
 Tags are published in the repository for every release (`git tag` / GitHub releases list).
 

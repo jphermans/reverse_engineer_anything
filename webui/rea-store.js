@@ -31,6 +31,7 @@ export const store = createStore("reaStore", {
   fileWs: "", filePath: "", fileEntries: [], fileLoading: false,
   installBusy: false,
   installProgress: null,
+  dialog: null,
   restoreMissing: [], restoreChecked: false,
   // live activity (sidebar indicator)
   activity: { status: "idle", action: "", detail: "", ts: "" },
@@ -129,7 +130,19 @@ export const store = createStore("reaStore", {
 
   async deleteWorkspace(name) {
     if (this.busy) return;
-    if (!window.confirm(`Really delete workspace '${name}'? All files in this workspace will be lost.`)) return;
+    this.openDialog(
+      "delete-ws",
+      "Delete workspace?",
+      [
+        "Workspace: " + name,
+        "All files in this workspace will be lost.",
+      ],
+      { name },
+    );
+    return;
+  },
+
+  async _doDeleteWorkspace(name) {
     this.busy = true;
     try {
       const res = await callJsonApi(`${API}/workspace`, { action: "delete", name, confirm: true });
@@ -184,7 +197,13 @@ export const store = createStore("reaStore", {
 
   async clearHistory() {
     if (this.busy) return;
-    if (!window.confirm("Clear the entire analysis history?")) return;
+    this.openDialog("clear-history", "Clear history?", [
+      "The entire analysis history will be removed.",
+    ], {});
+    return;
+  },
+
+  async _doClearHistory() {
     this.busy = true;
     try {
       await callJsonApi(`${API}/history_action`, { action: "clear", confirm: true });
@@ -320,15 +339,42 @@ export const store = createStore("reaStore", {
       const packages = (data.plan && data.plan.packages) || [];
       const nonApt = (data.plan && data.plan.non_apt) || {};
       const extras = Object.keys(nonApt).map((t) => t + ": " + nonApt[t]);
-      const msg = [
-        "Install " + label + "?",
+      const lines = [
         "Packages: " + (packages.join(", ") || "(none)"),
         extras.length ? "Other: " + extras.join(", ") : "",
         "Download: " + data.download_human,
-        "Disk: " + data.disk_human,
+        "Disk: " + data.disk_human + (data.disk_estimated ? " (est.)" : ""),
         data.command ? "Command: " + data.command : "",
-      ].filter(Boolean).join("\n");
-      if (!window.confirm(msg)) return;
+      ].filter(Boolean);
+      this.openDialog("install", "Install " + label + "?", lines, { tools, label });
+    } catch (e) {
+      toastFrontendError("Plan failed: " + e.message, "Reverse Engineer Anything");
+    } finally {
+      this.installBusy = false;
+    }
+  },
+
+  openDialog(kind, title, lines, payload) {
+    this.dialog = { kind, title, lines, payload: payload || {} };
+  },
+
+  dialogCancel() {
+    this.dialog = null;
+  },
+
+  async dialogConfirm() {
+    const d = this.dialog;
+    if (!d) return;
+    this.dialog = null;
+    if (d.kind === "install") await this.startInstall(d.payload.tools, d.payload.label);
+    else if (d.kind === "delete-ws") await this._doDeleteWorkspace(d.payload.name);
+    else if (d.kind === "clear-history") await this._doClearHistory();
+  },
+
+  async startInstall(tools, label) {
+    if (this.installBusy) return;
+    this.installBusy = true;
+    try {
       const res = await callJsonApi(`${API}/tools_install`, {
         action: "install", tools, confirm: true,
       });

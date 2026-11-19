@@ -65,7 +65,52 @@ def test_estimate_parses_sim_output():
 
 
 def test_estimate_zero_packages():
-    assert installer.estimate([]) == {"download_bytes": 0, "disk_bytes": 0}
+    assert installer.estimate([]) == {
+        "download_bytes": 0,
+        "disk_bytes": 0,
+        "disk_estimated": False,
+    }
+
+
+def test_parse_new_packages():
+    text = (
+        "The following NEW packages will be installed:\n"
+        "  file libmagic-mgc libmagic1t64\n"
+        "0 upgraded, 3 newly installed, 0 to remove and 795 not upgraded.\n"
+    )
+    assert installer._parse_new_packages(text) == ["file", "libmagic-mgc", "libmagic1t64"]
+
+
+def test_estimate_falls_back_to_cache_when_sim_has_no_sizes():
+    sim_text = (
+        "The following NEW packages will be installed:\n"
+        "  file libmagic-mgc libmagic1t64\n"
+        "0 upgraded, 3 newly installed, 0 to remove and 795 not upgraded.\n"
+    )
+    cache_text = (
+        "Package: file\nVersion: 1:5.47-4\nInstalled-Size: 80\nSize: 43032\n"
+        "Package: libmagic1t64\nVersion: 1:5.47-4\nInstalled-Size: 246\nSize: 110596\n"
+    )
+    result = installer.estimate(
+        ["file"],
+        runner=lambda pkgs: sim_text,
+        cache_runner=lambda pkgs: cache_text,
+    )
+    assert result["download_bytes"] == 43032 + 110596
+    assert result["disk_bytes"] == (80 + 246) * 1024
+    assert result["disk_estimated"] is True
+
+
+def test_estimate_no_fallback_without_usable_cache():
+    sim_text = "0 upgraded, 3 newly installed, 0 to remove and 795 not upgraded.\n"
+    result = installer.estimate(
+        ["file"],
+        runner=lambda pkgs: sim_text,
+        cache_runner=lambda pkgs: "",
+    )
+    assert result["download_bytes"] == 0
+    assert result["disk_bytes"] == 0
+    assert result["disk_estimated"] is False
 
 
 def test_human_bytes():

@@ -119,6 +119,52 @@ def _to_bytes(value: str, unit: str) -> int:
     return int(float(value) * FACTORS.get(unit, 1))
 
 
+def _parse_new_packages(text: str) -> list:
+    """Package names apt plans to install fresh, from the sim output."""
+    import re
+
+    m = re.search(
+        r"The following NEW packages will be installed:\n((?:  [^\n]+\n)+)",
+        text,
+    )
+    if not m:
+        return []
+    return m.group(1).split()
+
+
+def _default_cache_runner(packages) -> str:
+    import subprocess
+
+    out = subprocess.run(
+        ["apt-cache", "show"] + list(packages),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return out.stdout or ""
+
+
+def _parse_cache_sizes(text: str) -> dict:
+    """Per-package [download bytes, installed KiB] from apt-cache show output."""
+    sizes = {}
+    pkg = None
+    for line in text.splitlines():
+        if line.startswith("Package: "):
+            pkg = line[len("Package: "):].strip()
+            sizes[pkg] = [0, 0]
+        elif pkg and line.startswith("Size: "):
+            try:
+                sizes[pkg][0] += int(line.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+        elif pkg and line.startswith("Installed-Size: "):
+            try:
+                sizes[pkg][1] += int(line.split(":", 1)[1].strip())
+            except ValueError:
+                pass
+    return sizes
+
+
 def _apt_simulate(packages) -> str:
     import subprocess
 
@@ -133,16 +179,32 @@ def _apt_simulate(packages) -> str:
     return (out.stdout or "") + "\n" + (out.stderr or "")
 
 
-def estimate(packages, runner=None) -> dict:
+def estimate(packages, runner=None, cache_runner=None) -> dict:
     """Estimate download and disk cost via apt-get simulation.
 
     The runner is injectable so tests never need apt.
     """
     if not packages:
-        return {"download_bytes": 0, "disk_bytes": 0}
+        return {"download_bytes": 0, "disk_bytes": 0, "disk_estimated": False}
     text = (runner or _apt_simulate)(list(packages))
     download, disk = _parse_sim_output(text)
-    return {"download_bytes": download, "disk_bytes": disk}
+    disk_estimated = False
+    if download == 0 and disk == 0:
+        # apt 3.x simulation output no longer contains size lines; fall
+        # back to package metadata (Size = download bytes, Installed-Size
+        # = disk footprint in KiB).
+        new_pkgs = _parse_new_packages(text) or list(packages)
+        cache_text = (cache_runner or _default_cache_runner)(new_pkgs)
+        sizes = _parse_cache_sizes(cache_text)
+        if sizes:
+            download = sum(v[0] for v in sizes.values())
+            disk = sum(v[1] for v in sizes.values()) * 1024
+            disk_estimated = True
+    return {
+        "download_bytes": download,
+        "disk_bytes": disk,
+        "disk_estimated": disk_estimated,
+    }
 
 
 def build_step_plan(packages, non_apt) -> list:

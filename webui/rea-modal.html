@@ -20,6 +20,22 @@
           </button>
         </div>
 
+        <template x-if="$store.reaStore.dialog">
+          <div class="rea-dialog-overlay" @click.self="$store.reaStore.dialogCancel()">
+            <div class="rea-dialog" role="dialog" aria-modal="true">
+              <div class="rea-dialog-title" x-text="$store.reaStore.dialog.title"></div>
+              <div class="rea-dialog-lines">
+                <template x-for="line in $store.reaStore.dialog.lines" :key="line">
+                  <div class="rea-dialog-line" x-text="line"></div>
+                </template>
+              </div>
+              <div class="rea-dialog-actions">
+                <button type="button" class="btn" @click="$store.reaStore.dialogCancel()">Cancel</button>
+                <button type="button" class="btn rea-dialog-ok" @click="$store.reaStore.dialogConfirm()">Confirm</button>
+              </div>
+            </div>
+          </div>
+        </template>
         <template x-if="$store.reaStore.tab === 'tools'">
           <div class="rea-section">
             <div class="rea-summary">
@@ -152,6 +168,12 @@
       .rea-upload-btn.disabled { opacity: 0.6; pointer-events: none; }
       .rea-upload-note { font-size: 0.72rem; opacity: 0.6; }
       .rea-install-note { font-size: 0.72rem; opacity: 0.6; }
+      .rea-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+      .rea-dialog { background: #2a2f3a; color: #e5e7eb; border: 1px solid rgba(128,128,128,0.4); border-radius: 10px; padding: 1rem 1.1rem; max-width: 420px; width: calc(100% - 2rem); max-height: 80vh; overflow-y: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+      .rea-dialog-title { font-weight: 700; margin-bottom: 0.5rem; font-size: 0.95rem; }
+      .rea-dialog-line { font-size: 0.82rem; opacity: 0.85; padding: 0.1rem 0; overflow-wrap: anywhere; }
+      .rea-dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem; }
+      .rea-dialog-ok { background: rgb(59,130,246); border-color: rgb(59,130,246); color: #fff; }
       @media (max-width: 768px) {
         .rea-row { flex-direction: column; align-items: stretch; }
         .rea-tool { flex-wrap: wrap; row-gap: 0.15rem; }
