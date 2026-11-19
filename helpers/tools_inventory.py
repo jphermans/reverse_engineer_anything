@@ -50,7 +50,7 @@ CATEGORIES = [
     ]),
     ("decompilers", "Decompilers", [
         ("r2", "radare2: r2 -qc 'aaa; pdc @ sym.X' for pseudocode", "apt-get install radare2"),
-        ("analyzeHeadless", "Ghidra headless decompilation", "Download and extract a Ghidra release"),
+        ("analyzeHeadless", "Ghidra headless decompilation", "apt-get install ghidra (large download)"),
     ]),
 ]
 

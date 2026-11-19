@@ -17,7 +17,17 @@
             <span x-text="$store.reaStore.toolLabel + ' tools available'"></span>
             <span class="rea-missing" x-show="$store.reaStore.summary.missing.length"
                   x-text="'missing: ' + $store.reaStore.summary.missing.join(', ')"></span>
-            <span class="rea-install-note">Missing tools are never installed automatically; the agent proposes the install command and runs it only after your approval.</span>
+            <span class="rea-install-note">Missing tools are never installed automatically. Install is one click per tool or bundle, with an approval dialog showing the exact packages, download and disk size first.</span>
+            <div class="rea-restore" x-show="$store.reaStore.restoreMissing.length">
+              <span x-text="'Missing after replacement: ' + $store.reaStore.restoreMissing.join(', ')"></span>
+              <button type="button" class="btn" @click="$store.reaStore.restoreTools()">Restore</button>
+            </div>
+          </div>
+          <div class="rea-bundles">
+            <span class="rea-bundle-title">Bundles:</span>
+            <button type="button" class="btn" :disabled="$store.reaStore.installBusy" @click="$store.reaStore.planInstall(['jadx','apktool','binwalk','r2','wasm2wat','wasm-objdump','sqlite3','tshark','unsquashfs'], 'essentials bundle')">Essentials</button>
+            <button type="button" class="btn" :disabled="$store.reaStore.installBusy" @click="$store.reaStore.planInstall(['node','npx','jq'], 'dev bundle')">Dev</button>
+            <button type="button" class="btn" :disabled="$store.reaStore.installBusy" @click="$store.reaStore.planInstall(['analyzeHeadless','lldb','llvm-objdump','go'], 'heavy bundle (large download)')">Heavy</button>
           </div>
           <template x-for="cat in $store.reaStore.categories" :key="cat.key">
             <div class="rea-cat">
@@ -28,6 +38,7 @@
                   <span class="rea-tool-name" x-text="tool.name"></span>
                   <span class="rea-tool-note" x-text="tool.note"></span>
                   <span class="rea-hint" x-show="!tool.available && tool.hint" x-text="'Proposed install: ' + tool.hint"></span>
+                  <button type="button" class="btn rea-tool-install" x-show="!tool.available && !tool.no_install" :disabled="$store.reaStore.installBusy" @click="$store.reaStore.planInstall([tool.name], tool.name)">Install</button>
                 </div>
               </template>
             </div>
@@ -43,7 +54,7 @@
             <label class="btn rea-upload-btn" :class="{ disabled: $store.reaStore.uploadBusy }">
               <input type="file" multiple style="display:none"
                      @change="$store.reaStore.uploadFiles($event.target.files); $event.target.value=''" />
-              <span x-text="$store.reaStore.uploadBusy ? 'Uploading…' : 'Upload'">Upload</span>
+              <span x-text="$store.reaStore.uploadBusy ? 'Uploading ' + ($store.reaStore.uploadProgress || 0) + '%' : 'Upload'">Upload</span>
             </label>
           </div>
           <div class="rea-upload-note">Files and folders (as zip) land directly inside the workspace; zips are extracted automatically. The upload is the analysis copy. Then ask the agent in chat to analyze that workspace with leanrea.</div>
@@ -54,6 +65,28 @@
             <button type="button" class="btn" :disabled="$store.reaStore.busy || !$store.reaStore.newWorkspaceName.trim()"
                     @click="$store.reaStore.createWorkspace()">Create</button>
           </div>
+          <template x-if="$store.reaStore.fileWs">
+            <div class="rea-filebox">
+              <div class="rea-filebar">
+                <strong x-text="$store.reaStore.fileWs + '/' + $store.reaStore.filePath"></strong>
+                <button type="button" class="btn" x-show="$store.reaStore.filePath" @click="$store.reaStore.goUpDir()">Up</button>
+                <button type="button" class="rea-del" title="Close" @click="$store.reaStore.closeFiles()">
+                  <x-icon name="close" aria-hidden="true"></x-icon>
+                </button>
+              </div>
+              <template x-for="entry in $store.reaStore.fileEntries" :key="entry.name">
+                <div class="rea-file">
+                  <span class="rea-file-name" x-text="(entry.is_dir ? '[dir] ' : '') + entry.name"></span>
+                  <span class="rea-file-size" x-show="!entry.is_dir" x-text="$store.reaStore.formatBytes(entry.size || 0)"></span>
+                  <button type="button" class="btn" x-show="entry.is_dir" @click="$store.reaStore.openDir(entry.name)">Open</button>
+                  <a class="btn" x-show="!entry.is_dir"
+                     :href="$store.reaStore.downloadUrl($store.reaStore.fileWs, $store.reaStore.filePath ? $store.reaStore.filePath + '/' + entry.name : entry.name)"
+                     download>Download</a>
+                </div>
+              </template>
+              <div class="rea-empty" x-show="!$store.reaStore.fileEntries.length && !$store.reaStore.fileLoading">No files.</div>
+            </div>
+          </template>
           <div class="rea-root" x-text="'Root: ' + $store.reaStore.workspaceRoot"></div>
           <template x-if="$store.reaStore.workspaces.length === 0">
             <div class="rea-empty">No workspaces yet. Create one and let the agent place its analysis copies here (leanrea rule: work on a copy).</div>
@@ -62,6 +95,8 @@
             <div class="rea-ws">
               <span class="rea-ws-name" x-text="ws.name"></span>
               <span class="rea-ws-meta" x-text="ws.files + ' files, ' + $store.reaStore.formatBytes(ws.bytes)"></span>
+              <button type="button" class="btn" title="Fill the chat input with a leanrea analysis prompt" @click="$store.reaStore.analyzeWorkspace(ws.name)">Analyze</button>
+              <button type="button" class="btn" title="Browse and download files" @click="$store.reaStore.openFiles(ws.name)">Files</button>
               <button type="button" class="rea-del" title="Delete" @click="$store.reaStore.deleteWorkspace(ws.name)">
                 <x-icon name="delete" aria-hidden="true"></x-icon>
               </button>
@@ -72,6 +107,12 @@
 
       <template x-if="$store.reaStore.tab === 'history'">
         <div class="rea-section">
+          <div class="rea-row">
+            <input type="text" placeholder="filter by workspace (empty = all)" spellcheck="false"
+                   x-model="$store.reaStore.historyFilter"
+                   @keydown.enter="$store.reaStore.loadHistory()" />
+            <button type="button" class="btn" @click="$store.reaStore.loadHistory()">Filter</button>
+          </div>
           <div class="rea-row">
             <input type="text" placeholder="note, e.g. 'asar extracted, IPC channels found'" spellcheck="false"
                    x-model="$store.reaStore.noteText"
@@ -144,6 +185,20 @@
     .rea-upload-btn.disabled { opacity: 0.6; pointer-events: none; }
     .rea-upload-note { font-size: 0.72rem; opacity: 0.6; }
     .rea-install-note { font-size: 0.72rem; opacity: 0.6; }
+    .rea-bundles { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; font-size: 0.78rem; }
+    .rea-bundle-title { opacity: 0.7; }
+    .rea-bundles .btn { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
+    .rea-tool-install { font-size: 0.7rem; padding: 0.1rem 0.45rem; }
+    .rea-restore { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; background: rgba(234, 179, 8, 0.12); padding: 0.4rem 0.5rem; border-radius: 0.4rem; }
+    .rea-restore .btn { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
+    .rea-filebox { border: 1px solid rgba(128, 128, 128, 0.25); border-radius: 0.4rem; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.25rem; }
+    .rea-filebar { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+    .rea-filebar strong { font-family: monospace; overflow-wrap: anywhere; }
+    .rea-file { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; }
+    .rea-file .btn { font-size: 0.72rem; padding: 0.12rem 0.45rem; text-decoration: none; }
+    .rea-ws .btn { font-size: 0.72rem; padding: 0.12rem 0.45rem; }
+    .rea-file-name { font-family: monospace; flex: 1; overflow-wrap: anywhere; }
+    .rea-file-size { opacity: 0.6; font-size: 0.72rem; }
     @media (max-width: 768px) {
       .rea-row { flex-direction: column; align-items: stretch; }
       .rea-tool { flex-wrap: wrap; row-gap: 0.15rem; }

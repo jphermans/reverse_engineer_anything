@@ -1,8 +1,8 @@
 # Reverse Engineer Anything (Agent Zero plugin)
 
-![Version](https://img.shields.io/badge/version-v0.3.2-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+![Version](https://img.shields.io/badge/version-v0.4.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
 
-Agent Zero plugin v0.3.2: the workbench for reverse engineering with the leanrea method.
+Agent Zero plugin v0.4.0: the workbench for reverse engineering with the leanrea method.
 
 ## Based on leanrea
 
@@ -32,6 +32,7 @@ The plugin has no external dependencies, no credentials and no background proces
 |---|---|---|
 | `workspace_root` | `/a0/usr/workdir/rea` | Directory where workspaces are created |
 | `history_limit` | `200` (10-2000) | Maximum number of retained history entries |
+| `max_total_mb` | `10240` (0 disables) | Disk quota for the workspace root; uploads and zip expansion are refused at the limit |
 
 ## API
 
@@ -43,6 +44,9 @@ The plugin has no external dependencies, no credentials and no background proces
 | `/api/plugins/reverse_engineer_anything/history` | GET/POST | History listing (read-only) |
 | `/api/plugins/reverse_engineer_anything/history_action` | POST | `note` (text, workspace?), `remove` (id), `clear` (confirm) |
 | `/api/plugins/reverse_engineer_anything/upload` | POST | Multipart upload (`workspace` + `files`); zips are extracted into the workspace |
+| `/api/plugins/reverse_engineer_anything/files` | GET | `list` or `download` (`workspace`, `path`); read-only, paths stay inside the workspace |
+| `/api/plugins/reverse_engineer_anything/tools_install` | POST | `plan` (sizes via apt simulation), `install` (requires `confirm=true`), `status`, `restore_status`; whitelist-only |
+| `/api/plugins/reverse_engineer_anything/history` | GET/POST | History listing; optional `workspace` filter |
 
 Mutation routes use the standard Agent Zero CSRF policy; read-only routes allow GET polling.
 
@@ -77,6 +81,7 @@ Open the workbench (canvas rail on desktop, floating button on narrow screens), 
 | `v0.3.0` | Live sidebar | Sidebar indicator shows what the plugin is doing right now and the result when finished; clear warning toast when RE tools are missing (with install hints, nothing installed automatically) |
 | `v0.3.1` | Bugfix | Fix "Failed to load settings": hooks.py again shadowed the framework hook name because a stale copy slipped into the v0.2.0 release commit; corrected import restored and regression-tested |
 | `v0.3.2` | Upload hardening | Size limits are enforced while reading (no full in-memory load); each zip is capped on total extracted size (1 GB), checked before extraction and counted during it; refused uploads leave no partial output; symlinked workspace dirs are refused on delete |
+| `v0.4.0` | Install on demand | One-click tool install with an approval dialog that shows the exact packages, download size and disk usage first (nothing installs without confirm); restore banner after pod replacement; per-workspace file browser with download; Analyze button fills the chat input with a leanrea prompt; history filter per workspace; disk quota `max_total_mb`; upload progress; CI for the pure mapping tests |
 
 Tags are published in the repository for every release (`git tag` / GitHub releases list).
 

@@ -25,8 +25,17 @@ class History(ApiHandler):
         entries = state.list_history(
             settings["workspace_root"], settings["history_limit"]
         )
+        ws_filter = str(
+            input.get("workspace") or request.args.get("workspace") or ""
+        ).strip()
+        if ws_filter:
+            entries = [
+                e for e in entries
+                if str(e.get("workspace") or "") == ws_filter
+            ]
         return {
             "entries": entries,
             "history_limit": settings["history_limit"],
             "workspace_root": settings["workspace_root"],
+            "filter": ws_filter,
         }

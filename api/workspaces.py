@@ -6,7 +6,7 @@ Returns analysis workspaces under the configured root. Read-only.
 
 from helpers.api import ApiHandler, Input, Output, Request
 
-from usr.plugins.reverse_engineer_anything.helpers import state, workspace
+from usr.plugins.reverse_engineer_anything.helpers import quota, state, workspace
 
 
 class Workspaces(ApiHandler):
@@ -26,4 +26,6 @@ class Workspaces(ApiHandler):
         return {
             "workspace_root": root,
             "workspaces": workspace.list_workspaces(root),
+            "usage_bytes": quota.root_usage(root),
+            "quota_bytes": quota.limit_bytes(settings),
         }

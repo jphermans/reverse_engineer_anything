@@ -47,7 +47,9 @@ class Upload(ApiHandler):
         had_error = False
         for fs in files:
             try:
-                result = upload.handle_upload(root, ws_name, fs.filename, fs.stream)
+                result = upload.handle_upload(
+                    root, ws_name, fs.filename, fs.stream, settings
+                )
                 uploads.append({"filename": fs.filename, "status": "ok", **result})
             except (workspace.WorkspaceError, upload.UploadError) as exc:
                 had_error = True
@@ -58,7 +60,8 @@ class Upload(ApiHandler):
             activity.finish(
                 root,
                 "upload",
-                f"{len(failed)} file(s) failed in {ws_name}",
+                f"{len(failed)} file(s) failed in {ws_name}: "
+                + str(failed[0].get("error") or "")[:120],
                 ok=False,
             )
         else:

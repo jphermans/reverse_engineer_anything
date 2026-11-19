@@ -34,9 +34,22 @@ def _load(name, path):
 
 
 def _load_package():
-    # Load the BUILD copy under test (not the live plugin dir); its internal
-    # `from usr.plugins...` imports resolve against the installed helpers,
-    # whose validate_name/add_history are unchanged.
+    # Load the BUILD copy under test with a synthetic package chain so its
+    # `from usr.plugins...` imports resolve to the build helpers, not the
+    # live plugin dir (which can lag behind between releases).
+    import types
+
+    helpers_path = os.path.join(REPO, "helpers")
+    for name, path_attr in (
+        ("usr", []),
+        ("usr.plugins", []),
+        ("usr.plugins.reverse_engineer_anything", []),
+        ("usr.plugins.reverse_engineer_anything.helpers", [helpers_path]),
+    ):
+        if name not in sys.modules:
+            module = types.ModuleType(name)
+            module.__path__ = path_attr
+            sys.modules[name] = module
     return _load("rea_upload_test", os.path.join(REPO, "helpers", "upload.py"))
 
 

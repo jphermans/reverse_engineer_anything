@@ -1,5 +1,6 @@
 import { createStore } from "/js/AlpineStore.js";
-import { callJsonApi, fetchApi } from "/js/api.js";
+import { callJsonApi, fetchApi, getCsrfToken } from "/js/api.js";
+import { getStore } from "/js/AlpineStore.js";
 import {
   toastFrontendError,
   toastFrontendSuccess,
@@ -25,6 +26,11 @@ export const store = createStore("reaStore", {
   // uploads
   uploadWorkspace: "",
   uploadBusy: false,
+  uploadProgress: 0,
+  historyFilter: "",
+  fileWs: "", filePath: "", fileEntries: [], fileLoading: false,
+  installBusy: false,
+  restoreMissing: [], restoreChecked: false,
   // live activity (sidebar indicator)
   activity: { status: "idle", action: "", detail: "", ts: "" },
   activityTimer: null,
@@ -45,6 +51,7 @@ export const store = createStore("reaStore", {
 
   onOpen() {
     this.refreshAll();
+    this.checkRestore();
   },
 
   cleanup() {},
@@ -82,7 +89,9 @@ export const store = createStore("reaStore", {
 
   async loadHistory() {
     try {
-      const data = await callJsonApi(`${API}/history`, {});
+      const data = await callJsonApi(`${API}/history`, {
+        workspace: (this.historyFilter || "").trim(),
+      });
       this.history = data.entries || [];
       this.historyLimit = data.history_limit || 200;
     } catch (e) {
@@ -93,6 +102,13 @@ export const store = createStore("reaStore", {
   async createWorkspace() {
     const name = (this.newWorkspaceName || "").trim();
     if (!name || this.busy) return;
+    if (!this.wsNameValid(name)) {
+      toastFrontendError(
+        "Invalid name: use letters, digits, dot, dash or underscore (max 64, start with a letter or digit).",
+        "Reverse Engineer Anything"
+      );
+      return;
+    }
     this.busy = true;
     try {
       const res = await callJsonApi(`${API}/workspace`, { action: "create", name });
@@ -186,6 +202,13 @@ export const store = createStore("reaStore", {
       toastFrontendError("Enter a workspace name for the upload first.", "Reverse Engineer Anything");
       return;
     }
+    if (!this.wsNameValid(name)) {
+      toastFrontendError(
+        "Invalid workspace name: use letters, digits, dot, dash or underscore (max 64, start with a letter or digit).",
+        "Reverse Engineer Anything"
+      );
+      return;
+    }
     const files = Array.from(fileList || []);
     if (!files.length) return;
     this.uploadBusy = true;
@@ -193,8 +216,25 @@ export const store = createStore("reaStore", {
       const fd = new FormData();
       fd.append("workspace", name);
       for (const file of files) fd.append("files", file, file.name);
-      const res = await fetchApi(`${API}/upload`, { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
+      this.uploadProgress = 0;
+      const token = await getCsrfToken();
+      const data = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/api${API}/upload`);
+        xhr.setRequestHeader("X-CSRF-Token", token);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            this.uploadProgress = Math.round((ev.loaded / ev.total) * 100);
+          }
+        };
+        xhr.onload = () => {
+          try { resolve(JSON.parse(xhr.responseText || "{}")); }
+          catch (e) { resolve({}); }
+        };
+        xhr.onerror = () => reject(new Error("network error"));
+        xhr.send(fd);
+      });
+      this.uploadProgress = 100;
       const failed = (data.uploads || []).filter((u) => u.status === "error");
       if (data.status === "ok" && !failed.length) {
         const parts = (data.uploads || []).map(
@@ -213,6 +253,156 @@ export const store = createStore("reaStore", {
       toastFrontendError("Upload failed: " + e.message, "Reverse Engineer Anything");
     } finally {
       this.uploadBusy = false;
+    }
+  },
+
+  wsNameValid(name) {
+    return /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test((name || "").trim());
+  },
+
+  downloadUrl(ws, path) {
+    return `/api${API}/files?action=download&workspace=${encodeURIComponent(ws)}` +
+      `&path=${encodeURIComponent(path)}`;
+  },
+
+  async openFiles(ws) {
+    this.fileWs = ws;
+    this.filePath = "";
+    this.fileEntries = [];
+    await this.loadFiles();
+  },
+
+  async loadFiles() {
+    if (!this.fileWs) return;
+    this.fileLoading = true;
+    try {
+      const data = await callJsonApi(`${API}/files`, {
+        action: "list",
+        workspace: this.fileWs,
+        path: this.filePath || "",
+      });
+      this.fileEntries = data.entries || [];
+    } catch (e) {
+      toastFrontendError("Failed to list files: " + e.message, "Reverse Engineer Anything");
+    } finally {
+      this.fileLoading = false;
+    }
+  },
+
+  async openDir(name) {
+    this.filePath = this.filePath ? this.filePath + "/" + name : name;
+    await this.loadFiles();
+  },
+
+  goUpDir() {
+    const parts = this.filePath.split("/");
+    parts.pop();
+    this.filePath = parts.join("/");
+    this.loadFiles();
+  },
+
+  closeFiles() {
+    this.fileWs = "";
+    this.filePath = "";
+    this.fileEntries = [];
+  },
+
+  async planInstall(tools, label) {
+    if (this.installBusy) return;
+    this.installBusy = true;
+    try {
+      const data = await callJsonApi(`${API}/tools_install`, { action: "plan", tools });
+      if (data.status !== "ok") {
+        toastFrontendError(data.error || "Plan failed.", "Reverse Engineer Anything");
+        return;
+      }
+      const packages = (data.plan && data.plan.packages) || [];
+      const nonApt = (data.plan && data.plan.non_apt) || {};
+      const extras = Object.keys(nonApt).map((t) => t + ": " + nonApt[t]);
+      const msg = [
+        "Install " + label + "?",
+        "Packages: " + (packages.join(", ") || "(none)"),
+        extras.length ? "Other: " + extras.join(", ") : "",
+        "Download: " + data.download_human,
+        "Disk: " + data.disk_human,
+        data.command ? "Command: " + data.command : "",
+      ].filter(Boolean).join("
+");
+      if (!window.confirm(msg)) return;
+      const res = await callJsonApi(`${API}/tools_install`, {
+        action: "install", tools, confirm: true,
+      });
+      if (res.status !== "ok") {
+        toastFrontendError(res.error || "Install failed.", "Reverse Engineer Anything");
+        return;
+      }
+      toastFrontendSuccess("Installation started: " + label, "Reverse Engineer Anything");
+      this.pollInstallJob(res.job && res.job.id);
+    } catch (e) {
+      toastFrontendError("Install failed: " + e.message, "Reverse Engineer Anything");
+    } finally {
+      this.installBusy = false;
+    }
+  },
+
+  async pollInstallJob(jobId) {
+    const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+    for (let i = 0; i < 600; i++) {
+      await delay(3000);
+      let data;
+      try {
+        data = await callJsonApi(`${API}/tools_install`, { action: "status", job_id: jobId });
+      } catch (e) {
+        continue;
+      }
+      const job = data.job;
+      if (!job) continue;
+      if (job.state === "done") {
+        toastFrontendSuccess("Installed: " + (job.tools || []).join(", "), "Reverse Engineer Anything");
+        await this.loadTools();
+        this.checkRestore();
+        return;
+      }
+      if (job.state === "error") {
+        toastFrontendError("Install failed: " + (job.error || "unknown"), "Reverse Engineer Anything");
+        await this.loadTools();
+        return;
+      }
+    }
+    toastFrontendError("Install timed out waiting for status.", "Reverse Engineer Anything");
+  },
+
+  async checkRestore() {
+    if (this.restoreChecked) return;
+    try {
+      const data = await callJsonApi(`${API}/tools_install`, { action: "restore_status" });
+      this.restoreMissing = data.missing || [];
+      this.restoreChecked = true;
+    } catch (e) {
+      // Restore check stays silent on errors.
+    }
+  },
+
+  async restoreTools() {
+    const missing = this.restoreMissing.slice();
+    if (!missing.length) return;
+    await this.planInstall(missing, "previously installed tools: " + missing.join(", "));
+  },
+
+  analyzeWorkspace(ws) {
+    try {
+      const chat = getStore("chatInput");
+      if (!chat) throw new Error("chat input store not found");
+      chat.message =
+        "Analyze the workspace " + ws + " with leanrea. Workspace path: " +
+        (this.workspaceRoot || "").replace(/\/$/, "") + "/" + ws +
+        ". Start with fast-path recon, work on evidence, and report findings.";
+      toastFrontendSuccess(
+        "Analysis prompt placed in the chat input. Review and send.",
+        "Reverse Engineer Anything"
+      );
+    } catch (e) {
+      toastFrontendError("Could not fill the chat input: " + e.message, "Reverse Engineer Anything");
     }
   },
 

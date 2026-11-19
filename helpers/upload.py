@@ -17,7 +17,7 @@ existing files are replaced only after a complete, valid read.
 import os
 import zipfile
 
-from usr.plugins.reverse_engineer_anything.helpers import state, workspace
+from usr.plugins.reverse_engineer_anything.helpers import quota, state, workspace
 
 # Hard cap per uploaded file, independent of the framework limit (5 GB).
 MAX_FILE_BYTES = 500 * 1024 * 1024
@@ -179,12 +179,17 @@ def extract_zip(
     }
 
 
-def handle_upload(root: str, ws_name: str, filename: str, stream) -> dict:
+def handle_upload(
+    root: str, ws_name: str, filename: str, stream, settings=None
+) -> dict:
     """Route one upload into the workspace; extracts zip, stores plain files.
 
     The upload itself creates the workspace when it does not exist yet
     (copy-first: the upload is the analysis copy). The file content is
     consumed as a stream with the size limit enforced while reading.
+    When settings carry max_total_mb, the workspace root disk quota is
+    enforced: zips get a shrunken total-expansion cap and a plain file
+    that pushes usage past the cap is removed again.
     """
     ws_name = workspace.validate_name(ws_name)
     base = os.path.realpath(root)
@@ -196,10 +201,15 @@ def handle_upload(root: str, ws_name: str, filename: str, stream) -> dict:
 
     if (filename or "").lower().endswith(".zip"):
         data = read_limited(stream)
-        result = extract_zip(ws_path, filename, data)
+        _quota_gate(settings, root, incoming=len(data))
+        result = extract_zip(
+            ws_path, filename, data, total_limit=_zip_total_cap(settings, root)
+        )
         action = "upload_extract"
     else:
+        _quota_gate(settings, root, incoming=0)
         stored = store_plain_file(ws_path, filename, stream)
+        _quota_after_store(settings, root, stored)
         result = {"stored": os.path.basename(stored), "extracted": 0, "skipped": []}
         action = "upload"
 
@@ -209,3 +219,34 @@ def handle_upload(root: str, ws_name: str, filename: str, stream) -> dict:
         "details": result["stored"],
     })
     return {"workspace": ws_name, **result}
+
+
+def _quota_gate(settings, root: str, incoming: int) -> None:
+    """Refuse before writing when usage (plus incoming) passes the cap."""
+    if not settings:
+        return
+    try:
+        quota.check(settings, root, incoming=incoming)
+    except quota.QuotaExceeded as exc:
+        raise UploadError(str(exc))
+
+
+def _zip_total_cap(settings, root: str) -> int:
+    """Shrink the zip total cap to the remaining quota headroom."""
+    cap = quota.limit_bytes(settings or {})
+    if cap is None:
+        return MAX_ZIP_TOTAL_BYTES
+    remaining = max(0, cap - quota.root_usage(root))
+    return max(1024, min(MAX_ZIP_TOTAL_BYTES, remaining))
+
+
+def _quota_after_store(settings, root: str, stored: str) -> None:
+    """Post-check for plain files; removes the file when over the cap."""
+    cap = quota.limit_bytes(settings or {})
+    if cap is None:
+        return
+    if quota.root_usage(root) > cap:
+        _discard(stored)
+        raise UploadError(
+            "Upload exceeds the workspace disk quota (max_total_mb setting)."
+        )

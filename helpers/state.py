@@ -10,6 +10,7 @@ from helpers import plugins
 PLUGIN_NAME = "reverse_engineer_anything"
 DEFAULT_ROOT = "/a0/usr/workdir/rea"
 DEFAULT_HISTORY_LIMIT = 200
+DEFAULT_MAX_TOTAL_MB = 10240
 
 _lock = threading.Lock()
 
@@ -26,7 +27,16 @@ def load_settings() -> dict:
     except (TypeError, ValueError):
         limit = DEFAULT_HISTORY_LIMIT
     limit = max(10, min(limit, 2000))
-    return {"workspace_root": root, "history_limit": limit}
+    try:
+        quota_mb = int(settings.get("max_total_mb") or 0)
+    except (TypeError, ValueError):
+        quota_mb = DEFAULT_MAX_TOTAL_MB
+    quota_mb = max(0, min(quota_mb, 1000000))
+    return {
+        "workspace_root": root,
+        "history_limit": limit,
+        "max_total_mb": quota_mb,
+    }
 
 
 def history_file(root: str) -> str:

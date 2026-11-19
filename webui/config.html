@@ -14,6 +14,8 @@
       }
       const limit = Number(config.history_limit);
       config.history_limit = Number.isFinite(limit) ? Math.min(2000, Math.max(10, Math.round(limit))) : 200;
+      const quota = Number(config.max_total_mb);
+      config.max_total_mb = Number.isFinite(quota) ? Math.min(1000000, Math.max(0, Math.round(quota))) : 10240;
     }
   }" x-init="initConfig()">
 
@@ -38,6 +40,19 @@
       </div>
       <div class="field-control">
         <input type="number" min="10" max="2000" step="10" x-model.number="config.history_limit" />
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <div class="field-title">Disk quota (MB)</div>
+        <div class="field-description">
+          Maximum total size of the workspace root in MB (default 10240 = 10 GB).
+          Uploads and zip expansion are refused at the limit; 0 disables the quota.
+        </div>
+      </div>
+      <div class="field-control">
+        <input type="number" min="0" max="1000000" step="256" x-model.number="config.max_total_mb" />
       </div>
     </div>
 
