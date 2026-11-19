@@ -1,8 +1,8 @@
 # Reverse Engineer Anything (Agent Zero plugin)
 
-![Version](https://img.shields.io/badge/version-v0.4.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
+![Version](https://img.shields.io/badge/version-v0.4.1-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Platform](https://img.shields.io/badge/platform-Agent%20Zero-orange)
 
-Agent Zero plugin v0.4.0: the workbench for reverse engineering with the leanrea method.
+Agent Zero plugin v0.4.1: the workbench for reverse engineering with the leanrea method.
 
 ## Based on leanrea
 
@@ -82,6 +82,7 @@ Open the workbench (canvas rail on desktop, floating button on narrow screens), 
 | `v0.3.1` | Bugfix | Fix "Failed to load settings": hooks.py again shadowed the framework hook name because a stale copy slipped into the v0.2.0 release commit; corrected import restored and regression-tested |
 | `v0.3.2` | Upload hardening | Size limits are enforced while reading (no full in-memory load); each zip is capped on total extracted size (1 GB), checked before extraction and counted during it; refused uploads leave no partial output; symlinked workspace dirs are refused on delete |
 | `v0.4.0` | Install on demand | One-click tool install with an approval dialog that shows the exact packages, download size and disk usage first (nothing installs without confirm); restore banner after pod replacement; per-workspace file browser with download; Analyze button fills the chat input with a leanrea prompt; history filter per workspace; disk quota `max_total_mb`; upload progress; CI for the pure mapping tests |
+| `v0.4.1` | Sidebar icon fix | A real newline inside a string literal in `rea-store.js` broke its ESM parse; because the WebUI loads extension modules per extension point with Promise.all, one broken module dropped every canvas rail icon and the init chain (including REA's own icon). Fixed, and guarded by a CI step that parses every plugin JS file as ESM |
 
 Tags are published in the repository for every release (`git tag` / GitHub releases list).
 

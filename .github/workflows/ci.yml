@@ -16,3 +16,15 @@ jobs:
         run: python tests/test_installer.py
       - name: Quota tests
         run: python tests/test_quota.py
+      - name: JS ESM syntax check
+        run: |
+          fail=0
+          for f in $(find . -name "*.js" -not -path "./.git/*"); do
+            cp "$f" /tmp/chk.mjs
+            if ! node --check /tmp/chk.mjs 2>/tmp/chk.err; then
+              echo "FAIL $f"
+              cat /tmp/chk.err
+              fail=1
+            fi
+          done
+          exit $fail

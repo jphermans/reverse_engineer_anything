@@ -326,8 +326,7 @@ export const store = createStore("reaStore", {
         "Download: " + data.download_human,
         "Disk: " + data.disk_human,
         data.command ? "Command: " + data.command : "",
-      ].filter(Boolean).join("
-");
+      ].filter(Boolean).join("\n");
       if (!window.confirm(msg)) return;
       const res = await callJsonApi(`${API}/tools_install`, {
         action: "install", tools, confirm: true,
