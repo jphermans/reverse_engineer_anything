@@ -16,6 +16,8 @@ jobs:
         run: python tests/test_installer.py
       - name: Quota tests
         run: python tests/test_quota.py
+      - name: Install API hang-fix tests
+        run: python tests/test_install_api.py
       - name: JS ESM syntax check
         run: |
           fail=0

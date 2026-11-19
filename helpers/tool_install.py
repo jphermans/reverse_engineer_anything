@@ -14,6 +14,7 @@ import uuid
 from usr.plugins.reverse_engineer_anything.helpers import (
     activity,
     installer,
+    job_markers,
     tool_state,
 )
 
@@ -68,6 +69,9 @@ def start(root, tools, packages, non_apt):
             "log": [],
         }
         _jobs[job["id"]] = job
+    # Persist a running-job marker so a pod replacement can be reported
+    # as an interrupted install instead of silent data loss.
+    job_markers.mark(root, tools, packages)
     thread = threading.Thread(
         target=_run,
         args=(root, job["id"], job["tools"], job["packages"], non_apt),
@@ -107,6 +111,7 @@ def _run(root, job_id, tools, packages, non_apt):
             _append(job, "ERROR: " + str(exc)[:200])
         finally:
             job["finished"] = time.time()
+            job_markers.clear(root)
 
 
 def _run_cmd(job, cmd, timeout):

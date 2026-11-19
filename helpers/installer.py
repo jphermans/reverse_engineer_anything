@@ -123,7 +123,13 @@ def _apt_simulate(packages) -> str:
     import subprocess
 
     cmd = ["apt-get", "install", "-s", "-y"] + list(packages)
-    out = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    try:
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            "Package size estimation timed out (45s); "
+            "apt is probably busy with another operation. Try again later."
+        ) from exc
     return (out.stdout or "") + "\n" + (out.stderr or "")
 
 

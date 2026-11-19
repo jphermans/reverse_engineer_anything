@@ -355,7 +355,16 @@ export const store = createStore("reaStore", {
         continue;
       }
       const job = data.job;
-      if (!job) continue;
+      if (!job) {
+        if (data.interrupted) {
+          toastFrontendError(
+            "Installation was interrupted by a server restart: " + (data.interrupted.tools || []).join(", "),
+            "Reverse Engineer Anything"
+          );
+          return;
+        }
+        continue;
+      }
       if (job.state === "done") {
         toastFrontendSuccess("Installed: " + (job.tools || []).join(", "), "Reverse Engineer Anything");
         await this.loadTools();
@@ -373,6 +382,16 @@ export const store = createStore("reaStore", {
 
   async checkRestore() {
     if (this.restoreChecked) return;
+    try {
+      const st = await callJsonApi(`${API}/tools_install`, { action: "status" });
+      if (st && st.interrupted && (st.interrupted.tools || []).length) {
+        toastFrontendError(
+          "A previous tool installation was interrupted by a restart: " + st.interrupted.tools.join(", ")
+            + ". Install the tools again to restore them.",
+          "Reverse Engineer Anything"
+        );
+      }
+    } catch (e) { /* status endpoint unavailable; ignore */ }
     try {
       const data = await callJsonApi(`${API}/tools_install`, { action: "restore_status" });
       this.restoreMissing = data.missing || [];

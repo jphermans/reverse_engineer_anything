@@ -13,9 +13,12 @@ Nothing is ever installed automatically: the UI shows the plan (package
 names, download size, disk size, exact command) and the user approves it.
 """
 
+import asyncio
+
 from helpers.api import ApiHandler, Input, Output, Request
 
 from usr.plugins.reverse_engineer_anything.helpers import (
+    job_markers,
     state,
     tool_install,
     tool_state,
@@ -40,7 +43,9 @@ class ToolsInstall(ApiHandler):
             tools, error = _resolve_request(data)
             if error:
                 return {"status": "error", "error": error}
-            payload = tool_install.plan_payload(root, tools)
+            # Run the apt simulation in a worker thread; a blocking call
+            # here froze the whole event loop (and with it the WebUI).
+            payload = await asyncio.to_thread(tool_install.plan_payload, root, tools)
             payload["status"] = "ok"
             return payload
 
@@ -53,7 +58,12 @@ class ToolsInstall(ApiHandler):
             tools, error = _resolve_request(data)
             if error:
                 return {"status": "error", "error": error}
-            planned = tool_install.plan_payload(root, tools)
+            if tool_install.busy():
+                return {
+                    "status": "error",
+                    "error": "Another installation is already running; try again when it finishes.",
+                }
+            planned = await asyncio.to_thread(tool_install.plan_payload, root, tools)
             invalid = planned["plan"]["invalid"]
             if invalid:
                 return {
@@ -83,19 +93,23 @@ class ToolsInstall(ApiHandler):
 
         if action == "status":
             job = tool_install.get_job(str(data.get("job_id") or ""))
+            result = {"status": "ok", "job": None}
             if job is None:
-                return {"status": "ok", "job": None}
-            return {
-                "status": "ok",
-                "job": {
-                    "id": job["id"],
-                    "state": job["state"],
-                    "tools": job["tools"],
-                    "packages": job["packages"],
-                    "error": job["error"],
-                    "log_tail": job["log"][-8:],
-                },
+                # No in-memory job. A pod replacement kills running jobs;
+                # surface the persisted marker so the loss is explicit.
+                interrupted = job_markers.read(root)
+                if interrupted:
+                    result["interrupted"] = {"tools": interrupted["tools"]}
+                return result
+            result["job"] = {
+                "id": job["id"],
+                "state": job["state"],
+                "tools": job["tools"],
+                "packages": job["packages"],
+                "error": job["error"],
+                "log_tail": job["log"][-8:],
             }
+            return result
 
         if action == "restore_status":
             inventory = tools_inventory.build_inventory()
