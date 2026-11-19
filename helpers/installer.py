@@ -145,6 +145,33 @@ def estimate(packages, runner=None) -> dict:
     return {"download_bytes": download, "disk_bytes": disk}
 
 
+def build_step_plan(packages, non_apt) -> list:
+    """Human-readable step list for an install job (phase-true progress).
+
+    apt-get update and apt-get install each count as one phase; every
+    non-apt command (prettier, ilspycmd) is its own phase, followed by
+    recording the approved tools on the PVC.
+    """
+    steps = []
+    if packages:
+        steps.append("Updating package lists")
+        steps.append("Installing: " + ", ".join(packages))
+    for tool, cmd in (non_apt or {}).items():
+        steps.append("Running: " + cmd)
+    if steps:
+        steps.append("Recording approved tools")
+    return steps
+
+
+def percent_for_step(step_index: int, total: int) -> int:
+    """Percent shown when a step STARTS; completing the last step is 100."""
+    if total <= 0:
+        return 100
+    if step_index >= total:
+        return 100
+    return int(round(100.0 * step_index / total))
+
+
 def human_bytes(num: float) -> str:
     for unit in ("B", "kB", "MB", "GB", "TB"):
         if abs(num) < 1000 or unit == "TB":

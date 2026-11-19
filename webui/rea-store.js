@@ -30,6 +30,7 @@ export const store = createStore("reaStore", {
   historyFilter: "",
   fileWs: "", filePath: "", fileEntries: [], fileLoading: false,
   installBusy: false,
+  installProgress: null,
   restoreMissing: [], restoreChecked: false,
   // live activity (sidebar indicator)
   activity: { status: "idle", action: "", detail: "", ts: "" },
@@ -336,6 +337,7 @@ export const store = createStore("reaStore", {
         return;
       }
       toastFrontendSuccess("Installation started: " + label, "Reverse Engineer Anything");
+      this.installProgress = { percent: 0, step: "Starting", elapsed: 0, log_tail: [] };
       this.pollInstallJob(res.job && res.job.id);
     } catch (e) {
       toastFrontendError("Install failed: " + e.message, "Reverse Engineer Anything");
@@ -355,8 +357,19 @@ export const store = createStore("reaStore", {
         continue;
       }
       const job = data.job;
+      if (job && job.state === "running" && job.progress) {
+        this.installProgress = {
+          percent: job.progress.percent || 0,
+          step: job.progress.step || "Working",
+          steps_total: job.progress.steps_total || 0,
+          step_index: job.progress.step_index || 0,
+          elapsed: job.progress.elapsed || 0,
+          log_tail: job.log_tail || [],
+        };
+      }
       if (!job) {
         if (data.interrupted) {
+          this.installProgress = null;
           toastFrontendError(
             "Installation was interrupted by a server restart: " + (data.interrupted.tools || []).join(", "),
             "Reverse Engineer Anything"
@@ -366,12 +379,14 @@ export const store = createStore("reaStore", {
         continue;
       }
       if (job.state === "done") {
+        this.installProgress = null;
         toastFrontendSuccess("Installed: " + (job.tools || []).join(", "), "Reverse Engineer Anything");
         await this.loadTools();
         this.checkRestore();
         return;
       }
       if (job.state === "error") {
+        this.installProgress = null;
         toastFrontendError("Install failed: " + (job.error || "unknown"), "Reverse Engineer Anything");
         await this.loadTools();
         return;
@@ -492,6 +507,15 @@ export const store = createStore("reaStore", {
     const missing = (this.summary && this.summary.missing) || [];
     if (!this.loaded) return "loading";
     return missing.length === 0 ? "ok" : "warn";
+  },
+
+  formatElapsed(sec) {
+    const s = Math.max(0, Math.floor(sec || 0));
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    if (h > 0) return h + "h " + (m % 60) + "m";
+    if (m > 0) return m + "m " + (s % 60) + "s";
+    return s + "s";
   },
 
   formatBytes(n) {

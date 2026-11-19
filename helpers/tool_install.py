@@ -58,6 +58,7 @@ def start(root, tools, packages, non_apt):
     with _jobs_lock:
         if busy():
             return None
+        steps = installer.build_step_plan(packages, non_apt)
         job = {
             "id": uuid.uuid4().hex[:12],
             "state": "running",
@@ -67,11 +68,18 @@ def start(root, tools, packages, non_apt):
             "finished": 0,
             "error": "",
             "log": [],
+            "steps": steps,
+            "step_index": 0,
+            "step_label": steps[0] if steps else "",
+            "step_percent": installer.percent_for_step(0, len(steps)),
         }
         _jobs[job["id"]] = job
     # Persist a running-job marker so a pod replacement can be reported
     # as an interrupted install instead of silent data loss.
     job_markers.mark(root, tools, packages)
+    # Sidebar indicator: show the whole job as busy from the first step.
+    label = ", ".join(tools or []) or "(nothing)"
+    activity.start(root, "tool_install", "Installing: " + label)
     thread = threading.Thread(
         target=_run,
         args=(root, job["id"], job["tools"], job["packages"], non_apt),
@@ -81,13 +89,24 @@ def start(root, tools, packages, non_apt):
     return job
 
 
+def _set_step(job, index):
+    """Advance the phase-true progress (called when a step starts)."""
+    steps = job.get("steps") or []
+    job["step_index"] = min(index, len(steps))
+    job["step_label"] = steps[index] if index < len(steps) else ""
+    job["step_percent"] = installer.percent_for_step(index, len(steps))
+
+
 def _run(root, job_id, tools, packages, non_apt):
     with _apt_lock:
         job = get_job(job_id)
+        step = 0
         try:
             if packages:
+                _set_step(job, step); step += 1
                 _append(job, "$ apt-get update")
                 _run_cmd(job, ["apt-get", "update", "-qq"], timeout=600)
+                _set_step(job, step); step += 1
                 _append(job, "$ apt-get install -y " + " ".join(packages))
                 out = _run_cmd(
                     job,
@@ -96,11 +115,15 @@ def _run(root, job_id, tools, packages, non_apt):
                 )
                 _append(job, (out or "").strip().splitlines()[-1] if out else "")
             for tool, cmd in (non_apt or {}).items():
+                _set_step(job, step); step += 1
                 _append(job, "$ " + cmd)
                 _run_cmd(job, cmd.split(), timeout=900)
+            _set_step(job, step); step += 1
             for tool in tools:
                 tool_state.record(root, "tool", tool)
             job["state"] = "done"
+            job["step_percent"] = 100
+            job["step_label"] = ""
             label = ", ".join(tools) or "(nothing)"
             activity.finish(root, "tool_install", "Installed: " + label)
             _append(job, "DONE: " + label)

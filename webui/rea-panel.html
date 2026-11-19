@@ -18,6 +18,20 @@
             <span class="rea-missing" x-show="$store.reaStore.summary.missing.length"
                   x-text="'missing: ' + $store.reaStore.summary.missing.join(', ')"></span>
             <span class="rea-install-note">Missing tools are never installed automatically. Install is one click per tool or bundle, with an approval dialog showing the exact packages, download and disk size first.</span>
+            <template x-if="$store.reaStore.installProgress">
+              <div class="rea-install-progress">
+                <div class="rea-progress-head">
+                  <span class="rea-progress-step" x-text="$store.reaStore.installProgress.step"></span>
+                  <span class="rea-progress-meta" x-text="$store.reaStore.installProgress.percent + '% | ' + $store.reaStore.formatElapsed($store.reaStore.installProgress.elapsed)"></span>
+                </div>
+                <div class="rea-progress-bar"><div class="rea-progress-fill" :style="'width:' + $store.reaStore.installProgress.percent + '%'"></div></div>
+                <div class="rea-progress-log" x-show="($store.reaStore.installProgress.log_tail || []).length">
+                  <template x-for="line in $store.reaStore.installProgress.log_tail" :key="line">
+                    <div class="rea-progress-logline" x-text="line"></div>
+                  </template>
+                </div>
+              </div>
+            </template>
             <div class="rea-restore" x-show="$store.reaStore.restoreMissing.length">
               <span x-text="'Missing after replacement: ' + $store.reaStore.restoreMissing.join(', ')"></span>
               <button type="button" class="btn" @click="$store.reaStore.restoreTools()">Restore</button>
@@ -189,6 +203,14 @@
     .rea-bundle-title { opacity: 0.7; }
     .rea-bundles .btn { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
     .rea-tool-install { font-size: 0.7rem; padding: 0.1rem 0.45rem; }
+    .rea-install-progress { border: 1px solid rgba(128,128,128,0.35); border-radius: 8px; padding: 0.5rem 0.6rem; margin: 0.5rem 0; background: rgba(128,128,128,0.08); }
+    .rea-progress-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; margin-bottom: 0.35rem; }
+    .rea-progress-step { font-weight: 600; font-size: 0.82rem; }
+    .rea-progress-meta { font-size: 0.72rem; opacity: 0.75; white-space: nowrap; }
+    .rea-progress-bar { height: 6px; border-radius: 4px; background: rgba(128,128,128,0.25); overflow: hidden; }
+    .rea-progress-fill { height: 100%; border-radius: 4px; background: rgb(59,130,246); transition: width 0.6s ease; }
+    .rea-progress-log { margin-top: 0.4rem; max-height: 6.5rem; overflow-y: auto; font-family: monospace; font-size: 0.68rem; opacity: 0.8; }
+    .rea-progress-logline { white-space: pre-wrap; word-break: break-all; }
     .rea-restore { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-size: 0.78rem; background: rgba(234, 179, 8, 0.12); padding: 0.4rem 0.5rem; border-radius: 0.4rem; }
     .rea-restore .btn { font-size: 0.75rem; padding: 0.15rem 0.5rem; }
     .rea-filebox { border: 1px solid rgba(128, 128, 128, 0.25); border-radius: 0.4rem; padding: 0.4rem; display: flex; flex-direction: column; gap: 0.25rem; }

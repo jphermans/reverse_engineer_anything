@@ -101,6 +101,8 @@ class ToolsInstall(ApiHandler):
                 if interrupted:
                     result["interrupted"] = {"tools": interrupted["tools"]}
                 return result
+            import time as _time
+
             result["job"] = {
                 "id": job["id"],
                 "state": job["state"],
@@ -108,6 +110,13 @@ class ToolsInstall(ApiHandler):
                 "packages": job["packages"],
                 "error": job["error"],
                 "log_tail": job["log"][-8:],
+                "progress": {
+                    "percent": job.get("step_percent", 100 if job["state"] == "done" else 0),
+                    "step": job.get("step_label", ""),
+                    "step_index": job.get("step_index", 0),
+                    "steps_total": len(job.get("steps") or []),
+                    "elapsed": int(_time.time() - job.get("started", _time.time())),
+                },
             }
             return result
 
